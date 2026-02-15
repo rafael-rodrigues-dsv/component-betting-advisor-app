@@ -1018,7 +1018,7 @@ betting-bot/
 │           ├── xgboost_2025_01.pkl
 │           └── xgboost_2025_02.pkl
 │
-├── src/                              # Código fonte
+├── web_api/                          # Código fonte da API
 │   └── domain/
 │       └── utils/
 │           ├── validators_util.py    # Sufixo _util obrigatório

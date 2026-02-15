@@ -460,7 +460,7 @@ O sistema é iniciado através dos scripts `start.bat` (Windows) ou `start.sh` (
 │   │         → Cria todas as tabelas necessárias                         │  │
 │   │                                                                      │  │
 │   │  2. INICIAR API (FastAPI)                                           │  │
-│   │     uvicorn src.web.app:app --port 8000                            │  │
+│   │     python main.py                                                  │  │
 │   │     → API disponível em http://localhost:8000                       │  │
 │   │                                                                      │  │
 │   │  3. INICIAR REACT (Vite)                                            │  │

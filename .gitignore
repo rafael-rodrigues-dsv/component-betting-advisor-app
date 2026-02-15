@@ -1,0 +1,24 @@
+# Ambiente
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# Frontend
+webapp/node_modules/
+web_app/node_modules/
+web_app/dist/
+web_app/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Data
+data/
+*.db
+
+# Cache
+.cache/
+

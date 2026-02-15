@@ -263,7 +263,7 @@ betting-bot/
 │       ├── model_metadata.json           # Métricas e versão
 │       └── archive/                      # Versões anteriores
 │
-├── src/                                  # 📦 Código fonte
+├── web_api/                              # 📦 Código fonte da API
 │   ├── __init__.py
 │   │
 │   ├── web/                              # 🌐 WEB LAYER
@@ -816,8 +816,7 @@ def start_api():
     """Inicia a API FastAPI"""
     print("[API] Iniciando FastAPI na porta 8000...")
     subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "src.web.app:app", 
-         "--host", "0.0.0.0", "--port", "8000", "--reload"],
+        [sys.executable, "main.py"],
         cwd=ROOT_DIR
     )
 
@@ -825,7 +824,7 @@ def start_api():
 def start_react():
     """Inicia o React App"""
     print("[REACT] Iniciando React na porta 5173...")
-    web_app_dir = ROOT_DIR / "web-app"
+    web_app_dir = ROOT_DIR / "web_app"
     
     # Instala dependências se necessário
     if not (web_app_dir / "node_modules").exists():
@@ -1692,7 +1691,7 @@ O usuário pode escolher a estratégia de ordenação das sugestões de apostas,
 │   │                                                                     │  │
 │   │   DOMAIN LAYER                                                     │  │
 │   │   ────────────                                                     │  │
-│   │   src/domain/models/betting_strategy.py                           │  │
+│   │   web_api/domain/models/betting_strategy.py                       │  │
 │   │                                                                     │  │
 │   │   class BettingStrategy(Enum):                                    │  │
 │   │       CONSERVATIVE = "conservative"  # Maior confiança            │  │
@@ -1706,7 +1705,7 @@ O usuário pode escolher a estratégia de ordenação das sugestões de apostas,
 │   │                                                                     │  │
 │   │   DOMAIN LAYER - UTILS                                             │  │
 │   │   ────────────────────                                             │  │
-│   │   src/domain/utils/strategy_sorter_util.py                        │  │
+│   │   web_api/domain/utils/strategy_sorter_util.py                    │  │
 │   │                                                                     │  │
 │   │   def sort_by_strategy(predictions, strategy: BettingStrategy):   │  │
 │   │       if strategy == CONSERVATIVE:                                 │  │
@@ -1730,7 +1729,7 @@ O usuário pode escolher a estratégia de ordenação das sugestões de apostas,
 │   │                                                                     │  │
 │   │   APPLICATION LAYER                                                │  │
 │   │   ─────────────────                                                │  │
-│   │   src/application/impl/prediction_service_impl.py                 │  │
+│   │   web_api/application/impl/prediction_service_impl.py             │  │
 │   │                                                                     │  │
 │   │   def analyze(self, params: AnalyzeParams) -> List[Prediction]:   │  │
 │   │       predictions = self._generate_predictions(params)            │  │
@@ -1743,7 +1742,7 @@ O usuário pode escolher a estratégia de ordenação das sugestões de apostas,
 │   │                                                                     │  │
 │   │   WEB LAYER - REQUEST DTO                                          │  │
 │   │   ───────────────────────                                          │  │
-│   │   src/web/dtos/requests/prediction_request.py                     │  │
+│   │   web_api/web/dtos/requests/prediction_request.py                 │  │
 │   │                                                                     │  │
 │   │   class PredictionRequestDTO(BaseModel):                          │  │
 │   │       platform: str                                                │  │
