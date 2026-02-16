@@ -19,19 +19,11 @@ from web.dtos.responses.prediction_response import (
     RecommendationEnum
 )
 
+# Importa cache de matches
+from web.controllers.match_controller import MATCHES_CACHE
+
 router = APIRouter()
 
-
-MOCK_TEAMS = [
-    ("Flamengo", "Palmeiras"),
-    ("Corinthians", "São Paulo"),
-    ("Atlético Mineiro", "Fluminense"),
-    ("Botafogo", "Vasco da Gama"),
-    ("Grêmio", "Internacional"),
-    ("Santos", "Cruzeiro"),
-    ("Athletico Paranaense", "Bahia"),
-    ("Fortaleza", "Bragantino"),
-]
 
 
 def _get_recommendation(ev: float, confidence: float) -> str:
@@ -58,8 +50,23 @@ def _sort_predictions(predictions: List[MarketPredictionResponse], strategy: str
 
 
 def _generate_prediction(match_id: str, strategy: str) -> PredictionResponse:
-    """Gera previsão mockada"""
-    home, away = random.choice(MOCK_TEAMS)
+    """Gera previsão mockada usando dados reais do match"""
+
+    # Busca o match no cache
+    match = MATCHES_CACHE.get(match_id)
+
+    if not match:
+        # Fallback caso o match não esteja no cache
+        print(f"[WARNING] Match {match_id} não encontrado no cache!")
+        home = "Time A"
+        away = "Time B"
+        league = "Liga Desconhecida"
+        date = datetime.now().isoformat()
+    else:
+        home = match["home_team"]["name"]
+        away = match["away_team"]["name"]
+        league = match["league"]["name"]
+        date = match["date"]
 
     # Probabilidades
     home_prob = random.uniform(0.35, 0.55)
@@ -123,8 +130,8 @@ def _generate_prediction(match_id: str, strategy: str) -> PredictionResponse:
         match_id=match_id,
         home_team=home,
         away_team=away,
-        league="Brasileirão Série A",
-        date=datetime.now().isoformat(),
+        league=league,
+        date=date,
         predictions=predictions,
         strategy_used=strategy
     )
@@ -132,7 +139,7 @@ def _generate_prediction(match_id: str, strategy: str) -> PredictionResponse:
 
 @router.post("/analyze")
 async def analyze_matches(request: AnalyzeMatchesRequest):
-    """Analisa jogos e retorna previsões"""
+    """Analisa jogos e retorna previsões + pré-bilhete montado"""
     print(f"[DEBUG] Analisando {len(request.match_ids)} jogos com estratégia {request.strategy}")
 
     await asyncio.sleep(len(request.match_ids) * 0.3)  # Simula processamento
@@ -141,11 +148,39 @@ async def analyze_matches(request: AnalyzeMatchesRequest):
 
     print(f"[DEBUG] Geradas {len(results)} previsões")
 
+    # Monta pré-bilhete automaticamente com a melhor aposta de cada jogo
+    pre_ticket_bets = []
+    for prediction in results:
+        # Pega a primeira aposta (já vem ordenada pela estratégia)
+        if prediction.predictions:
+            best_market = prediction.predictions[0]
+            pre_ticket_bets.append({
+                "match_id": prediction.match_id,
+                "home_team": prediction.home_team,
+                "away_team": prediction.away_team,
+                "league": prediction.league,
+                "market": best_market.market.value,
+                "predicted_outcome": best_market.predicted_outcome,
+                "odds": best_market.odds,
+                "confidence": best_market.confidence
+            })
+
+    # Calcula odd combinada
+    combined_odds = 1.0
+    for bet in pre_ticket_bets:
+        combined_odds *= bet["odds"]
+
     response = {
         "success": True,
         "strategy": request.strategy.value,
         "count": len(results),
-        "predictions": [pred.model_dump() for pred in results]
+        "predictions": [pred.model_dump() for pred in results],
+        "pre_ticket": {
+            "bets": pre_ticket_bets,
+            "total_bets": len(pre_ticket_bets),
+            "combined_odds": round(combined_odds, 2),
+            "message": f"Pré-bilhete montado com {len(pre_ticket_bets)} apostas baseado na estratégia {request.strategy.value}"
+        }
     }
 
     return response

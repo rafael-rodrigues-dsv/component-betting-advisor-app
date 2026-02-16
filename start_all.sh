@@ -49,15 +49,17 @@ echo "[INFO] Frontend iniciado (PID: $FRONTEND_PID)"
 
 echo ""
 echo "========================================"
-echo "   Sistema rodando!"
+echo "   Sistema iniciado com sucesso!"
 echo "========================================"
 echo ""
-echo "Pressione Ctrl+C para parar"
-echo ""
 
-# Trap para matar processos ao sair
-trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" SIGINT SIGTERM
+# Abrir navegador (tenta diferentes comandos dependendo do OS)
+sleep 3
+if command -v xdg-open &> /dev/null; then
+    xdg-open http://localhost:5173
+elif command -v open &> /dev/null; then
+    open http://localhost:5173
+fi
 
-# Aguardar
-wait
+exit 0
 

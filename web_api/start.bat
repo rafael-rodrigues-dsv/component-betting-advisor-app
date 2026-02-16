@@ -11,11 +11,6 @@ cd /d "%~dp0"
 REM Define o diretório do projeto
 set WEB_API_ROOT=%~dp0
 
-REM Verifica se a pasta data existe na raiz do projeto (../../data)
-if not exist "%WEB_API_ROOT%..\data" (
-    echo [INFO] Criando pasta data...
-    mkdir "%WEB_API_ROOT%..\data"
-)
 
 REM Tenta py launcher
 py --version >nul 2>&1

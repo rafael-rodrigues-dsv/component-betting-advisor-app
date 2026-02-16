@@ -8,9 +8,9 @@ from enum import Enum
 
 class TicketStatusEnum(str, Enum):
     """Status do bilhete"""
-    PENDING = "PENDING"
-    WON = "WON"
-    LOST = "LOST"
+    PENDING = "PENDENTE"
+    WON = "GANHOU"
+    LOST = "PERDEU"
 
 
 class TicketBetResponse(BaseModel):
@@ -23,7 +23,8 @@ class TicketBetResponse(BaseModel):
     predicted_outcome: str
     odds: float
     confidence: float
-    result: Optional[str] = Field(None, description="Resultado da aposta: 'WON', 'LOST' ou None se pendente")
+    result: Optional[str] = Field(None, description="Resultado da aposta: 'GANHOU', 'PERDEU' ou None se pendente")
+    final_score: Optional[str] = Field(None, description="Placar final do jogo (ex: '2 x 1')")
 
 
 class TicketResponse(BaseModel):
@@ -61,7 +62,7 @@ class TicketResponse(BaseModel):
                 "combined_odds": 3.88,
                 "potential_return": 194.00,
                 "bookmaker_id": "bet365",
-                "status": "PENDING",
+                "status": "PENDENTE",
                 "created_at": "2026-02-16T18:30:00Z",
                 "profit": None
             }
@@ -102,7 +103,7 @@ class SimulateTicketResponse(BaseModel):
                 "ticket": {
                     "id": "ticket-uuid",
                     "name": "Rodada 5",
-                    "status": "WON",
+                    "status": "GANHOU",
                     "stake": 50.00,
                     "potential_return": 194.00,
                     "profit": 144.00

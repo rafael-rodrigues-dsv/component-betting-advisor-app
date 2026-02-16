@@ -2,7 +2,7 @@
 Ticket Controller - Gerenciamento de bilhetes (MOCK)
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Optional
 from datetime import datetime
 import random
@@ -26,8 +26,44 @@ router = APIRouter()
 TICKETS_DB: Dict[str, TicketResponse] = {}
 
 
+def simulate_ticket_result(ticket_id: str):
+    """Webhook mocado - simula resultado após 5 segundos"""
+    import time
+    time.sleep(5)
+
+    ticket = TICKETS_DB.get(ticket_id)
+    if not ticket or ticket.status != TicketStatusEnum.PENDING:
+        return
+
+    print(f"[WEBHOOK] Processando resultado do bilhete: {ticket_id}")
+
+    # Simula cada aposta individualmente baseado na confiança
+    all_won = True
+
+    for bet in ticket.bets:
+        bet_won = random.random() < (bet.confidence * 0.85)
+        bet.result = "GANHOU" if bet_won else "PERDEU"
+
+        # Gera placar final do jogo
+        home_goals = random.randint(0, 4)
+        away_goals = random.randint(0, 4)
+        bet.final_score = f"{home_goals} x {away_goals}"
+
+        if not bet_won:
+            all_won = False
+
+    # Bilhete só ganha se TODAS as apostas ganharem
+    ticket.status = TicketStatusEnum.WON if all_won else TicketStatusEnum.LOST
+    ticket.profit = round(ticket.potential_return - ticket.stake, 2) if all_won else -ticket.stake
+
+    TICKETS_DB[ticket_id] = ticket
+
+    result_text = "GANHOU! 🎉" if all_won else "PERDEU 😔"
+    print(f"[WEBHOOK] Bilhete {ticket_id}: {result_text}")
+
+
 @router.post("/tickets")
-async def create_ticket(request: CreateTicketRequest):
+async def create_ticket(request: CreateTicketRequest, background_tasks: BackgroundTasks):
     """Cria bilhete"""
     print(f"[DEBUG] Recebido request para criar bilhete: {request.name}")
     print(f"[DEBUG] Apostas: {len(request.bets)}, Stake: {request.stake}")
@@ -53,7 +89,8 @@ async def create_ticket(request: CreateTicketRequest):
             predicted_outcome=bet.predicted_outcome,
             odds=bet.odds,
             confidence=bet.confidence,
-            result=None
+            result=None,
+            final_score=None
         )
         for bet in request.bets
     ]
@@ -72,11 +109,14 @@ async def create_ticket(request: CreateTicketRequest):
 
     TICKETS_DB[ticket_id] = ticket
 
-    print(f"[DEBUG] Bilhete criado: {ticket_id}")
+    # Agenda webhook mocado para simular resultado em 5 segundos
+    background_tasks.add_task(simulate_ticket_result, ticket_id)
+
+    print(f"[DEBUG] Bilhete criado: {ticket_id} - Resultado será processado em 5s")
 
     return {
         "success": True,
-        "message": "Bilhete criado com sucesso",
+        "message": "Bilhete criado com sucesso! Resultado em 5 segundos...",
         "ticket": ticket.model_dump()
     }
 
@@ -114,6 +154,38 @@ async def get_ticket(ticket_id: str):
     return {"success": True, "ticket": ticket.model_dump()}
 
 
+@router.get("/tickets/stats/dashboard")
+async def get_dashboard_stats():
+    """Retorna estatísticas para o dashboard"""
+    all_tickets = list(TICKETS_DB.values())
+
+    total_tickets = len(all_tickets)
+    won_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.WON])
+    lost_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.LOST])
+    pending_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.PENDING])
+
+    # Taxa de sucesso (apenas bilhetes finalizados)
+    finalized_tickets = won_tickets + lost_tickets
+    success_rate = round((won_tickets / finalized_tickets * 100), 1) if finalized_tickets > 0 else 0
+
+    # Total apostado e ganho
+    total_staked = round(sum(t.stake for t in all_tickets), 2)
+    total_profit = round(sum(t.profit for t in all_tickets if t.profit is not None), 2)
+
+    return {
+        "success": True,
+        "stats": {
+            "total_tickets": total_tickets,
+            "won_tickets": won_tickets,
+            "lost_tickets": lost_tickets,
+            "pending_tickets": pending_tickets,
+            "success_rate": success_rate,
+            "total_staked": total_staked,
+            "total_profit": total_profit
+        }
+    }
+
+
 @router.delete("/tickets/{ticket_id}")
 async def delete_ticket(ticket_id: str):
     """Remove bilhete"""
@@ -132,23 +204,37 @@ async def simulate_result(ticket_id: str):
     if ticket.status != TicketStatusEnum.PENDING:
         raise HTTPException(400, "Bilhete já finalizado")
 
-    # Calcula probabilidade média de sucesso
-    avg_conf = sum(b.confidence for b in ticket.bets) / len(ticket.bets)
-    won = random.random() < (avg_conf * 0.9)
+    # Simula cada aposta individualmente baseado na confiança
+    all_won = True
+    lost_bets = []
 
-    # Atualiza o ticket
-    ticket.status = TicketStatusEnum.WON if won else TicketStatusEnum.LOST
-    ticket.profit = round(ticket.potential_return - ticket.stake, 2) if won else -ticket.stake
-
-    # Atualiza resultado de cada aposta
     for bet in ticket.bets:
-        bet.result = "WON" if won else "LOST"
+        # Cada aposta tem chance de ganhar baseada na sua confiança
+        bet_won = random.random() < (bet.confidence * 0.85)
+        bet.result = "GANHOU" if bet_won else "PERDEU"
+
+        # Gera placar final do jogo
+        home_goals = random.randint(0, 4)
+        away_goals = random.randint(0, 4)
+        bet.final_score = f"{home_goals} x {away_goals}"
+
+        if not bet_won:
+            all_won = False
+            lost_bets.append(f"{bet.home_team} vs {bet.away_team}")
+
+    # Bilhete só ganha se TODAS as apostas ganharem
+    ticket.status = TicketStatusEnum.WON if all_won else TicketStatusEnum.LOST
+    ticket.profit = round(ticket.potential_return - ticket.stake, 2) if all_won else -ticket.stake
 
     TICKETS_DB[ticket_id] = ticket
 
+    if all_won:
+        message = "GANHOU! 🎉 Todas as apostas deram green!"
+    else:
+        message = f"Perdeu 😔 - Não deu green: {', '.join(lost_bets)}"
+
     return {
         "success": True,
-        "message": f"Resultado simulado: {'GANHOU! 🎉' if won else 'Perdeu 😔'}",
+        "message": message,
         "ticket": ticket.model_dump()
     }
-

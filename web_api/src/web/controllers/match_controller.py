@@ -16,30 +16,45 @@ from web.dtos.responses.match_response import (
 
 router = APIRouter()
 
+# Cache global de matches gerados
+MATCHES_CACHE = {}
+
 # Mock data - Times por Liga
+
+# G12 Brasileirão (Times Grandes)
+G12_BRASILEIRAO = {
+    "Flamengo", "Palmeiras", "São Paulo", "Corinthians", "Atlético Mineiro",
+    "Fluminense", "Botafogo", "Grêmio", "Internacional", "Santos",
+    "Vasco da Gama", "Cruzeiro"
+}
+
+# G6 Premier League (Times Grandes)
+G6_PREMIER_LEAGUE = {
+    "Manchester City", "Arsenal", "Liverpool", "Manchester United",
+    "Newcastle", "Tottenham"
+}
 
 # Brasileirão Série A
 TEAMS_BRASILEIRAO = [
-    {"id": "t1", "name": "Flamengo", "logo": "/escudos/flamengo.png"},
-    {"id": "t2", "name": "Palmeiras", "logo": "/escudos/palmeiras.png"},
-    {"id": "t3", "name": "São Paulo", "logo": "/escudos/sao-paulo.png"},
-    {"id": "t4", "name": "Corinthians", "logo": "/escudos/corinthians.png"},
-    {"id": "t5", "name": "Atlético Mineiro", "logo": "/escudos/atletico-mineiro.png"},
-    {"id": "t6", "name": "Fluminense", "logo": "/escudos/fluminense.png"},
-    {"id": "t7", "name": "Botafogo", "logo": "/escudos/botafogo.png"},
-    {"id": "t8", "name": "Grêmio", "logo": "/escudos/gremio.png"},
-    {"id": "t9", "name": "Internacional", "logo": "/escudos/internacional.png"},
-    {"id": "t10", "name": "Santos", "logo": "/escudos/santos.png"},
-    {"id": "t11", "name": "Vasco da Gama", "logo": "/escudos/vasco.png"},
-    {"id": "t12", "name": "Cruzeiro", "logo": "/escudos/cruzeiro.png"},
-    {"id": "t13", "name": "Athletico Paranaense", "logo": "/escudos/athletico-paranaense.png"},
-    {"id": "t14", "name": "Bahia", "logo": "/escudos/bahia.png"},
-    {"id": "t15", "name": "Fortaleza", "logo": "/escudos/fortaleza.png"},
-    {"id": "t16", "name": "Bragantino", "logo": "/escudos/bragantino.png"},
-    {"id": "t17", "name": "Cuiabá", "logo": "/escudos/cuiaba.png"},
-    {"id": "t18", "name": "Goiás", "logo": "/escudos/goias.png"},
-    {"id": "t19", "name": "Coritiba", "logo": "/escudos/coritiba.png"},
-    {"id": "t20", "name": "Atlético Goianiense", "logo": "/escudos/atletico-goianiense.png"},
+    {"id": "t1", "name": "Flamengo", "logo": {"url": "/static/escudos/flamengo.png", "type": "LOCAL"}},
+    {"id": "t2", "name": "Palmeiras", "logo": {"url": "/static/escudos/palmeiras.png", "type": "LOCAL"}},
+    {"id": "t3", "name": "São Paulo", "logo": {"url": "/static/escudos/sao-paulo.png", "type": "LOCAL"}},
+    {"id": "t4", "name": "Corinthians", "logo": {"url": "/static/escudos/corinthians.png", "type": "LOCAL"}},
+    {"id": "t5", "name": "Atlético Mineiro", "logo": {"url": "/static/escudos/atletico-mineiro.png", "type": "LOCAL"}},
+    {"id": "t6", "name": "Fluminense", "logo": {"url": "/static/escudos/fluminense.png", "type": "LOCAL"}},
+    {"id": "t7", "name": "Botafogo", "logo": {"url": "/static/escudos/botafogo.png", "type": "LOCAL"}},
+    {"id": "t8", "name": "Grêmio", "logo": {"url": "/static/escudos/gremio.png", "type": "LOCAL"}},
+    {"id": "t9", "name": "Internacional", "logo": {"url": "/static/escudos/internacional.png", "type": "LOCAL"}},
+    {"id": "t10", "name": "Santos", "logo": {"url": "/static/escudos/santos.png", "type": "LOCAL"}},
+    {"id": "t11", "name": "Vasco da Gama", "logo": {"url": "/static/escudos/vasco.png", "type": "LOCAL"}},
+    {"id": "t12", "name": "Cruzeiro", "logo": {"url": "/static/escudos/cruzeiro.png", "type": "LOCAL"}},
+    {"id": "t14", "name": "Bahia", "logo": {"url": "/static/escudos/bahia.png", "type": "LOCAL"}},
+    {"id": "t15", "name": "Fortaleza", "logo": {"url": "/static/escudos/fortaleza.png", "type": "LOCAL"}},
+    {"id": "t16", "name": "Bragantino", "logo": {"url": "/static/escudos/bragantino.png", "type": "LOCAL"}},
+    {"id": "t17", "name": "Cuiabá", "logo": {"url": "/static/escudos/cuiaba.png", "type": "LOCAL"}},
+    {"id": "t18", "name": "Goiás", "logo": {"url": "/static/escudos/goias.png", "type": "LOCAL"}},
+    {"id": "t19", "name": "Coritiba", "logo": {"url": "/static/escudos/coritiba.png", "type": "LOCAL"}},
+    {"id": "t20", "name": "Atlético Goianiense", "logo": {"url": "/static/escudos/atletico-goianiense.png", "type": "LOCAL"}},
 ]
 
 # Copa do Brasil (usando times brasileiros)
@@ -47,26 +62,26 @@ TEAMS_COPA_BRASIL = TEAMS_BRASILEIRAO.copy()
 
 # Premier League
 TEAMS_PREMIER_LEAGUE = [
-    {"id": "tp1", "name": "Manchester City", "logo": "/escudos/manchester-city.png"},
-    {"id": "tp2", "name": "Arsenal", "logo": "/escudos/arsenal.png"},
-    {"id": "tp3", "name": "Liverpool", "logo": "/escudos/liverpool.png"},
-    {"id": "tp4", "name": "Manchester United", "logo": "/escudos/manchester-united.png"},
-    {"id": "tp5", "name": "Newcastle", "logo": "/escudos/newcastle.png"},
-    {"id": "tp6", "name": "Tottenham", "logo": "/escudos/tottenham.png"},
-    {"id": "tp7", "name": "Chelsea", "logo": "/escudos/chelsea.png"},
-    {"id": "tp8", "name": "Brighton", "logo": "/escudos/brighton.png"},
-    {"id": "tp9", "name": "Aston Villa", "logo": "/escudos/aston-villa.png"},
-    {"id": "tp10", "name": "West Ham", "logo": "/escudos/west-ham.png"},
-    {"id": "tp11", "name": "Fulham", "logo": "/escudos/fulham.png"},
-    {"id": "tp12", "name": "Brentford", "logo": "/escudos/brentford.png"},
-    {"id": "tp13", "name": "Crystal Palace", "logo": "/escudos/crystal-palace.png"},
-    {"id": "tp14", "name": "Wolverhampton", "logo": "/escudos/wolverhampton.png"},
-    {"id": "tp15", "name": "Nottingham Forest", "logo": "/escudos/nottingham-forest.png"},
-    {"id": "tp16", "name": "Everton", "logo": "/escudos/everton.png"},
-    {"id": "tp17", "name": "Leicester", "logo": "/escudos/leicester.png"},
-    {"id": "tp18", "name": "Leeds United", "logo": "/escudos/leeds-united.png"},
-    {"id": "tp19", "name": "Southampton", "logo": "/escudos/southampton.png"},
-    {"id": "tp20", "name": "Bournemouth", "logo": "/escudos/bournemouth.png"},
+    {"id": "tp1", "name": "Manchester City", "logo": {"url": "/static/escudos/manchester-city.png", "type": "LOCAL"}},
+    {"id": "tp2", "name": "Arsenal", "logo": {"url": "/static/escudos/arsenal.png", "type": "LOCAL"}},
+    {"id": "tp3", "name": "Liverpool", "logo": {"url": "/static/escudos/liverpool.png", "type": "LOCAL"}},
+    {"id": "tp4", "name": "Manchester United", "logo": {"url": "/static/escudos/manchester-united.png", "type": "LOCAL"}},
+    {"id": "tp5", "name": "Newcastle", "logo": {"url": "/static/escudos/newcastle.png", "type": "LOCAL"}},
+    {"id": "tp6", "name": "Tottenham", "logo": {"url": "/static/escudos/tottenham.png", "type": "LOCAL"}},
+    {"id": "tp7", "name": "Chelsea", "logo": {"url": "/static/escudos/chelsea.png", "type": "LOCAL"}},
+    {"id": "tp8", "name": "Brighton", "logo": {"url": "/static/escudos/brighton.png", "type": "LOCAL"}},
+    {"id": "tp9", "name": "Aston Villa", "logo": {"url": "/static/escudos/aston-villa.png", "type": "LOCAL"}},
+    {"id": "tp10", "name": "West Ham", "logo": {"url": "/static/escudos/west-ham.png", "type": "LOCAL"}},
+    {"id": "tp11", "name": "Fulham", "logo": {"url": "/static/escudos/fulham.png", "type": "LOCAL"}},
+    {"id": "tp12", "name": "Brentford", "logo": {"url": "/static/escudos/brentford.png", "type": "LOCAL"}},
+    {"id": "tp13", "name": "Crystal Palace", "logo": {"url": "/static/escudos/crystal-palace.png", "type": "LOCAL"}},
+    {"id": "tp14", "name": "Wolverhampton", "logo": {"url": "/static/escudos/wolverhampton.png", "type": "LOCAL"}},
+    {"id": "tp15", "name": "Nottingham Forest", "logo": {"url": "/static/escudos/nottingham-forest.png", "type": "LOCAL"}},
+    {"id": "tp16", "name": "Everton", "logo": {"url": "/static/escudos/everton.png", "type": "LOCAL"}},
+    {"id": "tp17", "name": "Leicester", "logo": {"url": "/static/escudos/leicester.png", "type": "LOCAL"}},
+    {"id": "tp18", "name": "Leeds United", "logo": {"url": "/static/escudos/leeds-united.png", "type": "LOCAL"}},
+    {"id": "tp19", "name": "Southampton", "logo": {"url": "/static/escudos/southampton.png", "type": "LOCAL"}},
+    {"id": "tp20", "name": "Bournemouth", "logo": {"url": "/static/escudos/bournemouth.png", "type": "LOCAL"}},
 ]
 
 # Mapa de times por liga
@@ -83,8 +98,8 @@ LEAGUES = [
 ]
 
 BOOKMAKERS = [
-    {"id": "b1", "name": "Bet365", "logo": "🎰"},
-    {"id": "b2", "name": "Betano", "logo": "⚡"},
+    {"id": "bet365", "name": "Bet365", "logo": "🎰", "is_default": True},
+    {"id": "betano", "name": "Betano", "logo": "⚡", "is_default": False},
 ]
 
 # Estádios reais dos times
@@ -133,6 +148,74 @@ STADIUMS = {
     "Southampton": {"name": "St Mary's Stadium", "city": "Southampton"},
     "Bournemouth": {"name": "Vitality Stadium", "city": "Bournemouth"},
 }
+
+
+def _is_big_team(team_name: str, league_id: str) -> bool:
+    """Verifica se o time é um dos grandes da liga"""
+    if league_id in ["l1", "l2"]:  # Brasileirão ou Copa do Brasil
+        return team_name in G12_BRASILEIRAO
+    elif league_id == "l3":  # Premier League
+        return team_name in G6_PREMIER_LEAGUE
+    return False
+
+
+def _calculate_realistic_odds(home_team: dict, away_team: dict, league_id: str) -> dict:
+    """
+    Calcula odds realistas baseadas na força dos times.
+    Times grandes (G12/G6) têm odds favoráveis contra times menores.
+    """
+    home_is_big = _is_big_team(home_team["name"], league_id)
+    away_is_big = _is_big_team(away_team["name"], league_id)
+
+    # Caso 1: Grande x Pequeno (mandante grande favorito)
+    if home_is_big and not away_is_big:
+        home_odd = round(random.uniform(1.35, 1.75), 2)  # Grande favorito
+        draw_odd = round(random.uniform(3.5, 4.5), 2)
+        away_odd = round(random.uniform(5.0, 9.0), 2)  # Pequeno azarão
+        over_25 = round(random.uniform(1.50, 1.80), 2)  # Provável muitos gols
+        under_25 = round(random.uniform(2.0, 2.5), 2)
+        btts_yes = round(random.uniform(1.95, 2.20), 2)
+        btts_no = round(random.uniform(1.70, 1.90), 2)
+
+    # Caso 2: Pequeno x Grande (visitante grande é favorito, mas não tanto)
+    elif not home_is_big and away_is_big:
+        home_odd = round(random.uniform(4.5, 8.0), 2)  # Pequeno azarão em casa
+        draw_odd = round(random.uniform(3.2, 4.0), 2)
+        away_odd = round(random.uniform(1.50, 1.90), 2)  # Grande favorito como visitante
+        over_25 = round(random.uniform(1.60, 1.90), 2)
+        under_25 = round(random.uniform(1.90, 2.30), 2)
+        btts_yes = round(random.uniform(1.85, 2.10), 2)
+        btts_no = round(random.uniform(1.75, 2.00), 2)
+
+    # Caso 3: Grande x Grande (jogo equilibrado com leve vantagem mandante)
+    elif home_is_big and away_is_big:
+        home_odd = round(random.uniform(2.00, 2.50), 2)  # Vantagem do mandante
+        draw_odd = round(random.uniform(3.0, 3.6), 2)
+        away_odd = round(random.uniform(2.80, 3.80), 2)
+        over_25 = round(random.uniform(1.70, 2.00), 2)  # Jogos abertos
+        under_25 = round(random.uniform(1.80, 2.10), 2)
+        btts_yes = round(random.uniform(1.70, 1.95), 2)
+        btts_no = round(random.uniform(1.90, 2.20), 2)
+
+    # Caso 4: Pequeno x Pequeno (jogo mais equilibrado)
+    else:
+        home_odd = round(random.uniform(2.20, 2.80), 2)  # Leve vantagem mandante
+        draw_odd = round(random.uniform(2.90, 3.50), 2)
+        away_odd = round(random.uniform(2.50, 3.50), 2)
+        over_25 = round(random.uniform(1.80, 2.20), 2)
+        under_25 = round(random.uniform(1.70, 2.10), 2)
+        btts_yes = round(random.uniform(1.80, 2.10), 2)
+        btts_no = round(random.uniform(1.75, 2.00), 2)
+
+    return {
+        "home": home_odd,
+        "draw": draw_odd,
+        "away": away_odd,
+        "over_25": over_25,
+        "under_25": under_25,
+        "btts_yes": btts_yes,
+        "btts_no": btts_no,
+    }
 
 
 def _generate_matches(date: str, league_id: Optional[str] = None) -> list:
@@ -282,6 +365,20 @@ def _generate_matches(date: str, league_id: Optional[str] = None) -> list:
             # Pegar estádio real do time da casa
             stadium = STADIUMS.get(home['name'], {"name": "Estádio Municipal", "city": "Cidade"})
 
+            # Calcula odds realistas baseadas na força dos times
+            odds_bet365 = _calculate_realistic_odds(home, away, league["id"])
+
+            # Betano tem variação de -3% a +3% nas odds (menor para manter realismo)
+            odds_betano = {
+                "home": round(odds_bet365["home"] * random.uniform(0.97, 1.03), 2),
+                "draw": round(odds_bet365["draw"] * random.uniform(0.97, 1.03), 2),
+                "away": round(odds_bet365["away"] * random.uniform(0.97, 1.03), 2),
+                "over_25": round(odds_bet365["over_25"] * random.uniform(0.97, 1.03), 2),
+                "under_25": round(odds_bet365["under_25"] * random.uniform(0.97, 1.03), 2),
+                "btts_yes": round(odds_bet365["btts_yes"] * random.uniform(0.97, 1.03), 2),
+                "btts_no": round(odds_bet365["btts_no"] * random.uniform(0.97, 1.03), 2),
+            }
+
             matches.append({
                 "id": str(uuid.uuid4()),
                 "league": league,
@@ -292,13 +389,8 @@ def _generate_matches(date: str, league_id: Optional[str] = None) -> list:
                 "round": round_info,
                 "venue": stadium,
                 "odds": {
-                    "home": round(random.uniform(1.5, 3.5), 2),
-                    "draw": round(random.uniform(2.8, 4.2), 2),
-                    "away": round(random.uniform(1.5, 3.5), 2),
-                    "over_25": round(random.uniform(1.6, 2.3), 2),
-                    "under_25": round(random.uniform(1.6, 2.3), 2),
-                    "btts_yes": round(random.uniform(1.6, 2.1), 2),
-                    "btts_no": round(random.uniform(1.6, 2.1), 2),
+                    "bet365": odds_bet365,
+                    "betano": odds_betano
                 }
             })
 
@@ -316,6 +408,13 @@ async def get_matches(
         date = datetime.now().strftime("%Y-%m-%d")
 
     matches = _generate_matches(date, league_id)
+
+    # Ordena jogos por data e hora
+    matches.sort(key=lambda m: m["date"])
+
+    # Adiciona matches ao cache global para uso nos predictions
+    for match in matches:
+        MATCHES_CACHE[match["id"]] = match
 
     print(f"[DEBUG] Data: {date}, League: {league_id}, Total jogos: {len(matches)}")
 

@@ -1,105 +1,408 @@
-# 🎰 Betting Bot - Arquitetura do Sistema
+# 🎰 Betting Bot - Arquitetura do Sistema (V2)
 
-> Sistema de sugestão de bilhetes de apostas esportivas usando IA
+> Sistema de sugestão de bilhetes de apostas esportivas - **Implementação Real**
 
-**Data:** 2026-02-14  
-**Versão:** 1.0.0
+**Data:** 2026-02-17  
+**Versão:** 2.0.0  
+**Status:** ✅ POC Implementada (Frontend + Backend Mock)
 
 ---
 
 ## 📋 Índice
 
 1. [Visão Geral](#visão-geral)
-2. [Decisões Técnicas](#decisões-técnicas)
-3. [Arquitetura N-Camadas](#arquitetura-n-camadas)
-4. [Estrutura de Pastas](#estrutura-de-pastas)
-5. [Fluxo de Dados](#fluxo-de-dados)
-6. [Interfaces e Contratos](#interfaces-e-contratos)
-7. [Padrões de Projeto](#padrões-de-projeto)
-8. [Componentes](#componentes)
-9. [Regras de Dependência](#regras-de-dependência)
+2. [Stack Tecnológica](#stack-tecnológica)
+3. [Arquitetura Atual (POC)](#arquitetura-atual-poc)
+4. [Estrutura de Pastas Real](#estrutura-de-pastas-real)
+5. [Endpoints da API](#endpoints-da-api)
+6. [Fluxo de Dados](#fluxo-de-dados)
+7. [Componentes Frontend](#componentes-frontend)
+8. [Estado Global (Contexts)](#estado-global-contexts)
+9. [Próximos Passos](#próximos-passos)
 
 ---
 
 ## 🎯 Visão Geral
 
-Sistema que analisa dados esportivos e gera sugestões de apostas inteligentes usando **IA/ML**, utilizando a **API-Football** como fonte principal de dados (estatísticas + odds).
+### Status Atual da Implementação
+
+O sistema está atualmente em **fase de POC (Proof of Concept)** com:
+- ✅ **Frontend completo** (React + TypeScript + Vite)
+- ✅ **Backend com controllers mockados** (FastAPI)
+- ✅ **Estrutura de dados definida** (DTOs e Types)
+- ⏳ **Integração com API-Football** (próxima etapa)
+- ⏳ **Modelos de IA** (próxima etapa)
 
 ### Características Principais
 
-- **Esporte:** Futebol
-- **Fonte de Dados:** API-Football (estatísticas + odds de múltiplas casas)
-- **Análise:** Modelos estatísticos (Poisson) e Machine Learning (XGBoost)
-- **Interface:** React Web Application
+| Característica | Status | Descrição |
+|---------------|---------|-----------|
+| **Frontend React** | ✅ Implementado | Interface completa com todas as telas |
+| **Backend FastAPI** | ✅ Implementado | Controllers com dados mockados |
+| **DTOs e Types** | ✅ Implementado | Contratos de dados TypeScript/Python |
+| **Escudos dos Times** | ✅ Implementado | 130+ escudos servidos pelo backend |
+| **Estado Global** | ✅ Implementado | Contexts API (React) |
+| **Cache API-Football** | ⏳ Planejado | Sistema de cache com TTL |
+| **Modelos de IA** | ⏳ Planejado | Poisson + XGBoost |
 
 ---
 
-## 🌐 API-Football - Fonte de Dados
+## 🛠️ Stack Tecnológica
 
-### Sobre a API
+### Backend
 
-A **API-Football** é uma API REST que fornece dados completos de futebol, incluindo estatísticas e odds de várias casas de apostas.
+| Tecnologia | Versão | Uso |
+|------------|--------|-----|
+| **Python** | 3.14 | Linguagem principal |
+| **FastAPI** | 0.109.0 | Framework web |
+| **Uvicorn** | 0.27.0 | Servidor ASGI |
+| **Pydantic** | 2.5.3 | Validação de dados |
+| **httpx** | 0.26.0 | Cliente HTTP (API-Football) |
+| **python-dotenv** | 1.0.0 | Variáveis de ambiente |
 
-| Item | Detalhe |
-|------|---------|
-| **URL Base** | https://api-football-v1.p.rapidapi.com/v3 |
-| **Documentação** | https://www.api-football.com/documentation-v3 |
-| **Autenticação** | API Key via header `x-rapidapi-key` |
+### Frontend
 
-### Plano Gratuito
+| Tecnologia | Versão | Uso |
+|------------|--------|-----|
+| **React** | 18.x | UI Library |
+| **TypeScript** | 5.x | Linguagem |
+| **Vite** | 5.x | Build tool |
+| **Fetch API** | Native | Cliente HTTP |
 
-| Recurso | Limite |
-|---------|--------|
-| **Requests** | 100 por dia |
-| **Rate Limit** | 30 requests por minuto |
-| **Cobertura** | 900+ ligas e copas |
-| **Histórico** | Últimas 2 temporadas |
+---
 
-### Endpoints Utilizados
+## 🏗️ Arquitetura Atual (POC)
 
-| Endpoint | Descrição | Uso no Sistema |
-|----------|-----------|----------------|
-| `GET /fixtures` | Lista partidas por data/liga | Buscar jogos do dia |
-| `GET /fixtures/statistics` | Estatísticas da partida | Análise detalhada |
-| `GET /teams/statistics` | Estatísticas do time na temporada | Input para IA |
-| `GET /fixtures/headtohead` | Histórico de confrontos | Análise H2H |
-| `GET /odds` | Odds de várias casas de apostas | Buscar odds |
-| `GET /odds/bookmakers` | Lista casas disponíveis | Configuração |
-| `GET /predictions` | Previsões da própria API | Comparação |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         🌐 FRONTEND (React + Vite)                           │
+│                         http://localhost:5173                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  📄 Pages (Rotas)           ⚡ Contexts (Estado)      🧩 Components         │
+│  ├── Dashboard.tsx          ├── AppContext            ├── MatchCard         │
+│  ├── Matches.tsx            ├── BookmakerContext     ├── MatchList         │
+│  ├── Predictions.tsx        ├── PredictionContext    ├── PredictionCard    │
+│  └── Tickets.tsx            └── TicketContext        └── TicketBuilder     │
+│                                                                             │
+│  🛠️ Services                                                                │
+│  ├── api/apiClient.ts          (HTTP Client)                               │
+│  ├── api/apiEndpoints.ts       (Endpoints)                                 │
+│  ├── notificationService.ts    (Toasts)                                    │
+│  └── storageService.ts         (LocalStorage)                              │
+│                                                                             │
+└──────────────────────────────┬──────────────────────────────────────────────┘
+                               │
+                               │ HTTP/JSON
+                               │
+┌──────────────────────────────▼──────────────────────────────────────────────┐
+│                        📡 BACKEND (FastAPI)                                  │
+│                        http://localhost:8000                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🎮 Controllers (web/controllers/)                                          │
+│  ├── match_controller.py                                                   │
+│  │   ├── GET  /api/v1/matches         → Lista jogos (mockado)              │
+│  │   ├── GET  /api/v1/leagues         → Lista ligas (mockado)              │
+│  │   └── GET  /api/v1/bookmakers      → Lista casas (mockado)              │
+│  │                                                                          │
+│  ├── prediction_controller.py                                              │
+│  │   └── POST /api/v1/analyze         → Analisa jogos (mockado)            │
+│  │                                                                          │
+│  └── ticket_controller.py                                                  │
+│      ├── GET  /api/v1/tickets         → Lista bilhetes                     │
+│      ├── POST /api/v1/tickets         → Cria bilhete                       │
+│      ├── GET  /api/v1/tickets/stats/dashboard → Estatísticas              │
+│      └── POST /api/v1/tickets/{id}/simulate → Simula resultado            │
+│                                                                             │
+│  📦 DTOs (web/dtos/responses/)                                              │
+│  ├── logo_dto.py              → LogoDTO (url + type: LOCAL/EXT)            │
+│  ├── match_response.py        → Match, Team, League, Bookmaker             │
+│  ├── prediction_response.py   → Prediction, MarketPrediction               │
+│  └── ticket_response.py       → Ticket, TicketBet                          │
+│                                                                             │
+│  📁 Static Files                                                            │
+│  └── /static/escudos/         → 130+ escudos PNG (servido via StaticFiles) │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-### Casas de Apostas Disponíveis (via API)
+---
 
-A API-Football fornece odds das seguintes casas (entre outras):
+## 📁 Estrutura de Pastas Real
 
-- Bet365
-- Betfair
-- 1xBet
-- Pinnacle
-- Betano
-- Sportingbet
-- William Hill
-- Unibet
+```
+component-betting-advisor-app/
+│
+├── start_all.bat                         # 🪟 Inicia backend + frontend
+├── start_all.sh                          # 🐧 Inicia backend + frontend
+├── .gitignore                            # Git ignore global
+├── README.md
+│
+├── docs/                                 # 📚 Documentação
+│   ├── ARQUITETURA.md                    # Arquitetura completa (planejada)
+│   ├── ARQUITETURA_V2.md                 # Este documento (implementação real)
+│   ├── FLUXO_FUNCIONAL.md               # Fluxo funcional detalhado
+│   └── MODELO_IA.md                     # Modelos de IA
+│
+├── data/                                 # 💾 Banco de Dados (futuro)
+│   └── (vazio - será criado quando necessário)
+│
+├── web_api/                              # 🔙 BACKEND
+│   ├── start.bat                         # Inicia apenas backend
+│   ├── start.sh
+│   ├── requirements.txt                  # fastapi, uvicorn, pydantic, httpx
+│   ├── README.md
+│   │
+│   ├── src/                              # Código fonte
+│   │   ├── __init__.py
+│   │   ├── main.py                       # FastAPI app
+│   │   │
+│   │   ├── web/                          # Web Layer
+│   │   │   ├── __init__.py
+│   │   │   │
+│   │   │   ├── controllers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── match_controller.py   # 410 linhas
+│   │   │   │   ├── prediction_controller.py  # 310 linhas
+│   │   │   │   └── ticket_controller.py  # 280 linhas
+│   │   │   │
+│   │   │   └── dtos/
+│   │   │       ├── __init__.py
+│   │   │       ├── requests/
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── match_request.py
+│   │   │       │   ├── prediction_request.py
+│   │   │       │   └── ticket_request.py
+│   │   │       │
+│   │   │       └── responses/
+│   │   │           ├── __init__.py
+│   │   │           ├── logo_dto.py       # LogoDTO (url + type)
+│   │   │           ├── match_response.py # 146 linhas
+│   │   │           ├── prediction_response.py
+│   │   │           └── ticket_response.py
+│   │   │
+│   │   └── static/                       # Arquivos estáticos
+│   │       └── escudos/                  # 130+ escudos PNG
+│   │           ├── flamengo.png
+│   │           ├── palmeiras.png
+│   │           ├── corinthians.png
+│   │           ├── manchester-city.png
+│   │           ├── arsenal.png
+│   │           └── ... (130+ arquivos)
+│   │
+│   └── .venv/                            # Ambiente virtual
+│
+└── web_app/                              # ⚛️ FRONTEND
+    ├── start.bat                         # Inicia apenas frontend
+    ├── start.sh
+    ├── package.json
+    ├── vite.config.ts
+    ├── tsconfig.json
+    ├── index.html
+    │
+    ├── .gitignore                        # Ignora dist/ e node_modules/
+    │
+    ├── public/
+    │   └── vite.svg
+    │
+    └── src/
+        ├── main.tsx                      # Entry point
+        ├── App.tsx                       # Root component
+        │
+        ├── components/                   # Componentes React
+        │   ├── common/
+        │   │   ├── Header.tsx            # 118 linhas
+        │   │   ├── Sidebar.tsx           # 95 linhas
+        │   │   └── Loading.tsx           # 18 linhas
+        │   │
+        │   ├── dashboard/
+        │   │   ├── index.ts              # Barrel export
+        │   │   ├── StatsCard.tsx         # 42 linhas
+        │   │   └── QuickGuide.tsx        # 65 linhas
+        │   │
+        │   ├── matches/
+        │   │   ├── MatchList.tsx         # 233 linhas (com collapse/expand)
+        │   │   └── MatchCard.tsx         # 95 linhas
+        │   │
+        │   ├── predictions/
+        │   │   ├── PredictionPanel.tsx   # 187 linhas
+        │   │   ├── PredictionCard.tsx    # 142 linhas
+        │   │   └── ConfidenceMeter.tsx   # 48 linhas
+        │   │
+        │   └── tickets/
+        │       ├── TicketBuilder.tsx     # 156 linhas
+        │       └── TicketHistory.tsx     # 198 linhas
+        │
+        ├── contexts/                     # Context API
+        │   ├── AppContext.tsx            # Estado da aplicação
+        │   ├── BookmakerContext.tsx      # Casas de apostas
+        │   ├── PredictionContext.tsx     # Previsões
+        │   └── TicketContext.tsx         # Bilhetes
+        │
+        ├── hooks/
+        │   └── useMatches.ts             # Hook de jogos
+        │
+        ├── pages/
+        │   ├── index.ts                  # Barrel export
+        │   ├── Dashboard.tsx             # 156 linhas
+        │   ├── Matches.tsx               # 189 linhas
+        │   ├── Predictions.tsx           # 142 linhas
+        │   └── Tickets.tsx               # 178 linhas
+        │
+        ├── services/
+        │   ├── notificationService.ts    # Toast notifications
+        │   ├── storageService.ts         # LocalStorage tipado
+        │   │
+        │   └── api/
+        │       ├── apiClient.ts          # HTTP Client (fetch)
+        │       ├── apiEndpoints.ts       # 108 linhas
+        │       └── index.ts              # Barrel export
+        │
+        ├── styles/
+        │   └── globals.css               # 1594 linhas (CSS completo)
+        │
+        └── types/
+            └── index.ts                  # 141 linhas (todas as interfaces)
+```
 
-### Exemplo de Response - Odds
+---
 
+## 🔌 Endpoints da API
+
+### 📊 Match Controller
+
+#### `GET /api/v1/matches`
+Lista jogos disponíveis para análise.
+
+**Query Params:**
+- `date` (optional): Data no formato `YYYY-MM-DD`
+- `league_id` (optional): ID da liga (`l1`, `l2`, `l3`)
+
+**Response:**
 ```json
 {
-  "league": { "id": 39, "name": "Premier League" },
-  "fixture": { "id": 123456 },
+  "success": true,
+  "date": "2026-02-17",
+  "count": 10,
+  "matches": [
+    {
+      "id": "uuid",
+      "league": {
+        "id": "l1",
+        "name": "Brasileirão Série A",
+        "country": "Brazil",
+        "logo": "🇧🇷",
+        "type": "league"
+      },
+      "home_team": {
+        "id": "t1",
+        "name": "Flamengo",
+        "logo": {
+          "url": "/static/escudos/flamengo.png",
+          "type": "LOCAL"
+        },
+        "country": "Brazil"
+      },
+      "away_team": {
+        "id": "t2",
+        "name": "Palmeiras",
+        "logo": {
+          "url": "/static/escudos/palmeiras.png",
+          "type": "LOCAL"
+        },
+        "country": "Brazil"
+      },
+      "date": "2026-02-17T15:00:00Z",
+      "status": "NS",
+      "round": {
+        "type": "round",
+        "number": 5,
+        "name": "Rodada 5"
+      },
+      "venue": {
+        "name": "Maracanã",
+        "city": "Rio de Janeiro"
+      },
+      "odds": {
+        "bet365": {
+          "home": 2.10,
+          "draw": 3.20,
+          "away": 2.80,
+          "over_25": 1.85,
+          "under_25": 1.90,
+          "btts_yes": 1.75,
+          "btts_no": 1.95
+        },
+        "betano": {
+          "home": 2.12,
+          "draw": 3.18,
+          "away": 2.85,
+          "over_25": 1.88,
+          "under_25": 1.87,
+          "btts_yes": 1.78,
+          "btts_no": 1.92
+        }
+      }
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/leagues`
+Lista ligas/campeonatos disponíveis.
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 3,
+  "leagues": [
+    {
+      "id": "l1",
+      "name": "Brasileirão Série A",
+      "country": "Brazil",
+      "logo": "🇧🇷",
+      "type": "league"
+    },
+    {
+      "id": "l2",
+      "name": "Copa do Brasil",
+      "country": "Brazil",
+      "logo": "🏆",
+      "type": "cup"
+    },
+    {
+      "id": "l3",
+      "name": "Premier League",
+      "country": "England",
+      "logo": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "type": "league"
+    }
+  ]
+}
+```
+
+#### `GET /api/v1/bookmakers`
+Lista casas de apostas disponíveis.
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 2,
   "bookmakers": [
     {
-      "id": 6,
+      "id": "bet365",
       "name": "Bet365",
-      "bets": [
-        {
-          "name": "Match Winner",
-          "values": [
-            { "value": "Home", "odd": "2.10" },
-            { "value": "Draw", "odd": "3.40" },
-            { "value": "Away", "odd": "3.20" }
-          ]
-        }
-      ]
+      "logo": "🎰",
+      "is_default": true
+    },
+    {
+      "id": "betano",
+      "name": "Betano",
+      "logo": "⚡",
+      "is_default": false
     }
   ]
 }
@@ -107,1920 +410,541 @@ A API-Football fornece odds das seguintes casas (entre outras):
 
 ---
 
-## ⚙️ Decisões Técnicas
+### 🧠 Prediction Controller
 
-| Aspecto | Decisão |
-|---------|---------|
-| **Arquitetura** | N-Camadas (Layered Architecture) |
-| **Padrão de Criação** | Factory Pattern |
-| **Banco de Dados** | SQLite (auto-init no startup) |
-| **Cache API-Football** | SQLite com TTL diferenciado por tipo de dado |
-| **Execução** | Sob demanda (usuário trigger) |
-| **Frontend** | React (Vite + TypeScript) |
-| **Backend** | Python + FastAPI |
-| **Comunicação** | REST API |
-| **Acesso entre Camadas** | Via Interfaces (Inversão de Dependência) |
+#### `POST /api/v1/analyze`
+Analisa jogos selecionados e retorna previsões.
 
----
-
-## 🏗️ Arquitetura N-Camadas
-
+**Request Body:**
+```json
+{
+  "match_ids": ["uuid1", "uuid2", "uuid3"],
+  "strategy": "BALANCED"
+}
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│              BETTING BOT - N-LAYER + DEPENDENCY INVERSION                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         WEB LAYER                                    │   │
-│  │                                                                      │   │
-│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐  │   │
-│  │  │   React     │    │ Controllers │    │      DTOs/Schemas       │  │   │
-│  │  │   Web App   │───▶│  (Routes)   │───▶│  (Request/Response)     │  │   │
-│  │  └─────────────┘    └──────┬──────┘    └───────────┬─────────────┘  │   │
-│  │                            │                       │                 │   │
-│  │                            │            DTO ──▶ Domain Model         │   │
-│  │                            │              (Conversão via Mapper)     │   │
-│  └────────────────────────────┼─────────────────────────────────────────┘   │
-│                               │                                             │
-│                               ▼ via Contracts                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      APPLICATION LAYER                               │   │
-│  │                                                                      │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐    │   │
-│  │  │              contracts/ (Service Contracts)                  │    │   │
-│  │  │  MatchServiceContract │ PredictionServiceContract │ ...     │    │   │
-│  │  └─────────────────────────────────────────────────────────────┘    │   │
-│  │                               ▲                                      │   │
-│  │                               │ implements                           │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐    │   │
-│  │  │                    impl/ (Implementations)                   │    │   │
-│  │  │  MatchServiceImpl │ PredictionServiceImpl │ TicketServiceImpl│   │   │
-│  │  └─────────────────────────────────────────────────────────────┘    │   │
-│  └──────────────────────────────┬──────────────────────────────────────┘   │
-│                                 │                                           │
-│                                 ▼ via Domain Contracts                      │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        DOMAIN LAYER                                  │   │
-│  │                   (ZERO dependências externas)                       │   │
-│  │                                                                      │   │
-│  │  ┌───────────────────────────────────────────────────────────────┐  │   │
-│  │  │                 contracts/ (Domain Contracts)                  │  │   │
-│  │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐  │  │   │
-│  │  │  │ Platform    │ │ DataSource  │ │ Analyzer                │  │  │   │
-│  │  │  │ Contract    │ │ Contract    │ │ Contract                │  │  │   │
-│  │  │  └─────────────┘ └─────────────┘ └─────────────────────────┘  │  │   │
-│  │  │  ┌─────────────┐ ┌─────────────┐                              │  │   │
-│  │  │  │ Repository  │ │  Factory    │                              │  │   │
-│  │  │  │ Contract    │ │  Contract   │                              │  │   │
-│  │  │  └─────────────┘ └─────────────┘                              │  │   │
-│  │  └───────────────────────────────────────────────────────────────┘  │   │
-│  │                                                                      │   │
-│  │  ┌──────────────┐  ┌──────────────────────────────────────────┐    │   │
-│  │  │   models/    │  │              services/                    │    │   │
-│  │  │  (Entities)  │  │   contracts/ + impl/ (Domain Services)   │    │   │
-│  │  └──────────────┘  └──────────────────────────────────────────┘    │   │
-│  │                                                                      │   │
-│  │  ┌──────────────┐  ┌──────────────────────────────────────────┐    │   │
-│  │  │   utils/     │  │              factories/                   │    │   │
-│  │  │              │  │   contracts/ + impl/ (Factory Pattern)   │    │   │
-│  │  └──────────────┘  └──────────────────────────────────────────┘    │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│                                 ▲                                           │
-│                                 │ Implementa Contracts                      │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                    INFRASTRUCTURE LAYER                              │   │
-│  │               (Implementações concretas dos Contracts)               │   │
-│  │                                                                      │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
-│  │  │  database/repositories/                                      │   │   │
-│  │  │    contracts/ + impl/ (Repository Implementations)           │   │   │
-│  │  └─────────────────────────────────────────────────────────────┘   │   │
-│  │                                                                      │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐   │   │
-│  │  │  external/                                                   │   │   │
-│  │  │    platforms/bet365/ (PlatformContract impl)                │   │   │
-│  │  │    data_sources/sofascore/ (DataSourceContract impl)        │   │   │
-│  │  │    analyzers/ (AnalyzerContract impl)                       │   │   │
-│  │  └─────────────────────────────────────────────────────────────┘   │   │
-│  │                                                                      │   │
-│  │  ┌─────────────────┐  ┌─────────────────────────────────────────┐  │   │
-│  │  │   config/       │  │   container.py (DI Container)          │  │   │
-│  │  └─────────────────┘  └─────────────────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+
+**Estratégias disponíveis:**
+- `BALANCED` - Balanceada (confiança + value)
+- `CONSERVATIVE` - Conservadora (alta confiança)
+- `VALUE_BET` - Value Bet (foco em value)
+- `AGGRESSIVE` - Agressiva (odds altas)
+
+**Response:**
+```json
+{
+  "success": true,
+  "predictions": [
+    {
+      "match_id": "uuid1",
+      "match_name": "Flamengo vs Palmeiras",
+      "league": "Brasileirão Série A",
+      "bookmaker_id": "bet365",
+      "markets": [
+        {
+          "market_type": "1X2",
+          "market_name": "Resultado Final",
+          "prediction": "HOME",
+          "prediction_label": "Vitória Flamengo",
+          "confidence": 72.5,
+          "odd": 2.10,
+          "value_bet_percentage": 12.3,
+          "expected_value": 1.52,
+          "is_recommended": true,
+          "risk_level": "MEDIUM"
+        }
+      ]
+    }
+  ],
+  "pre_ticket": {
+    "bets": [...],
+    "total_bets": 3,
+    "combined_odds": 6.84,
+    "message": "Pré-bilhete criado com 3 apostas"
+  }
+}
 ```
 
 ---
 
-## 📁 Estrutura de Pastas
+### 🎫 Ticket Controller
 
-```
-betting-bot/
-│
-├── main.py                               # 🚀 Entry point (inicia API + React)
-├── start.bat                             # 🪟 Script Windows para iniciar o sistema
-├── start.sh                              # 🐧 Script Linux/Mac para iniciar o sistema
-├── requirements.txt                      # Dependências Python
-├── README.md                             # Documentação inicial
-│
-├── .venv/                                # 🐍 Ambiente virtual Python (criado pelo start)
-│
-├── .cache/                               # 📦 Cache local (não commitar)
-│   ├── pip/                              # Cache de pacotes pip (evita re-download)
-│   └── python/                           # Instalador Python 3.14 (Windows)
-│
-├── docs/                                 # 📚 Documentação
-│   ├── ARQUITETURA.md
-│   ├── FLUXO_FUNCIONAL.md
-│   └── MODELO_IA.md
-│
-├── data/                                 # 💾 Banco de Dados e Dados (RAIZ)
-│   ├── betting.db                        # Banco SQLite ÚNICO (criado pelo init)
-│   │
-│   ├── scripts/                          # Scripts de inicialização do DB
-│   │   ├── __init__.py
-│   │   └── init_database.py              # Cria banco se não existir (chamado pela main)
-│   │
-│   ├── raw/                              # Dados brutos
-│   │   ├── football-data/                # CSVs do Football-Data.co.uk
-│   │   │   ├── england/                  # Premier League, Championship
-│   │   │   ├── spain/                    # La Liga
-│   │   │   ├── italy/                    # Serie A
-│   │   │   ├── germany/                  # Bundesliga
-│   │   │   └── france/                   # Ligue 1
-│   │   │
-│   │   └── api_football/                 # Dados coletados da API
-│   │       └── collected_matches.json
-│   │
-│   ├── processed/                        # Dados processados
-│   │   ├── training_dataset.parquet      # Dataset final para treino
-│   │   └── feature_stats.json            # Estatísticas normalização
-│   │
-│   └── models/                           # Modelos de ML
-│       ├── xgboost_model.pkl             # Modelo em produção
-│       ├── scaler.pkl                    # Normalizador
-│       ├── model_metadata.json           # Métricas e versão
-│       └── archive/                      # Versões anteriores
-│
-├── web_api/                              # 📦 Código fonte da API
-│   ├── __init__.py
-│   │
-│   ├── web/                              # 🌐 WEB LAYER
-│   │   ├── __init__.py
-│   │   │
-│   │   ├── controllers/                  # API Controllers (Routes)
-│   │   │   ├── __init__.py
-│   │   │   ├── platform_controller.py
-│   │   │   ├── match_controller.py
-│   │   │   ├── prediction_controller.py
-│   │   │   └── ticket_controller.py
-│   │   │
-│   │   ├── dtos/                         # DTOs (Request/Response)
-│   │   │   ├── __init__.py
-│   │   │   ├── requests/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── match_request.py
-│   │   │   │   ├── prediction_request.py
-│   │   │   │   └── ticket_request.py
-│   │   │   │
-│   │   │   └── responses/
-│   │   │       ├── __init__.py
-│   │   │       ├── match_response.py
-│   │   │       ├── prediction_response.py
-│   │   │       └── ticket_response.py
-│   │   │
-│   │   └── mappers/                      # DTO <-> Domain Model
-│   │       ├── __init__.py
-│   │       ├── match_mapper.py
-│   │       ├── prediction_mapper.py
-│   │       └── ticket_mapper.py
-│   │
-│   ├── application/                      # 📦 APPLICATION LAYER
-│   │   ├── __init__.py
-│   │   │
-│   │   ├── contracts/                    # Contratos dos Services
-│   │   │   ├── __init__.py
-│   │   │   ├── match_service_contract.py
-│   │   │   ├── prediction_service_contract.py
-│   │   │   ├── ticket_service_contract.py
-│   │   │   └── result_checker_service_contract.py
-│   │   │
-│   │   └── impl/                         # Implementações dos Services
-│   │       ├── __init__.py
-│   │       ├── match_service_impl.py
-│   │       ├── prediction_service_impl.py
-│   │       ├── ticket_service_impl.py
-│   │       └── result_checker_service_impl.py
-│   │
-│   ├── domain/                           # 🧠 DOMAIN LAYER
-│   │   ├── __init__.py
-│   │   │
-│   │   ├── models/                       # Domain Models (Entities)
-│   │   │   ├── __init__.py
-│   │   │   ├── match.py
-│   │   │   ├── team.py
-│   │   │   ├── bet.py
-│   │   │   ├── ticket.py
-│   │   │   ├── prediction.py
-│   │   │   ├── betting_strategy.py       # Enum de estratégias de apostas
-│   │   │   └── value_objects/
-│   │   │       ├── __init__.py
-│   │   │       ├── odds.py
-│   │   │       └── confidence_score.py
-│   │   │
-│   │   ├── contracts/                    # Contratos/Ports (Abstrações)
-│   │   │   ├── __init__.py
-│   │   │   ├── odds_provider_contract.py
-│   │   │   ├── data_source_contract.py
-│   │   │   ├── analyzer_contract.py
-│   │   │   ├── repository_contract.py
-│   │   │   └── factory_contract.py
-│   │   │
-│   │   ├── services/                     # Domain Services (Regras de Negócio)
-│   │   │   ├── __init__.py
-│   │   │   ├── contracts/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── value_bet_calculator_contract.py
-│   │   │   │   ├── odds_comparator_contract.py
-│   │   │   │   └── bankroll_manager_contract.py
-│   │   │   │
-│   │   │   └── impl/
-│   │   │       ├── __init__.py
-│   │   │       ├── value_bet_calculator_impl.py
-│   │   │       ├── odds_comparator_impl.py
-│   │   │       └── bankroll_manager_impl.py
-│   │   │
-│   │   ├── factories/                    # Factory (contracts + impl)
-│   │   │   ├── __init__.py
-│   │   │   ├── contracts/
-│   │   │   │   ├── __init__.py
-│   │   │   │   ├── odds_provider_factory_contract.py
-│   │   │   │   ├── data_source_factory_contract.py
-│   │   │   │   └── analyzer_factory_contract.py
-│   │   │   │
-│   │   │   └── impl/
-│   │   │       ├── __init__.py
-│   │   │       ├── odds_provider_factory_impl.py
-│   │   │       ├── data_source_factory_impl.py
-│   │   │       └── analyzer_factory_impl.py
-│   │   │
-│   │   └── utils/                        # Utilitários do Domain
-│   │       ├── __init__.py
-│   │       ├── validators_util.py        # Sufixo _util obrigatório
-│   │       ├── calculators_util.py       # Sufixo _util obrigatório
-│   │       ├── helpers_util.py           # Sufixo _util obrigatório
-│   │       └── strategy_sorter_util.py   # Ordenação por estratégia de aposta
-│   │
-│   └── infrastructure/                   # 🔧 INFRASTRUCTURE LAYER
-│       ├── __init__.py
-│       │
-│       ├── config/
-│       │   ├── __init__.py
-│       │   ├── settings.py
-│       │   └── constants.py
-│       │
-│       ├── database/                     # Conexão e Repositórios
-│       │   ├── __init__.py
-│       │   ├── connection.py             # Conexão com data/betting.db
-│       │   ├── models.py                 # SQLAlchemy Models
-│       │   │
-│       │   ├── cache/                    # 🗄️ Cache da API-Football
-│       │   │   ├── __init__.py
-│       │   │   ├── cache_config.py       # TTLs por tipo de dado
-│       │   │   ├── cache_repository.py   # CRUD do cache
-│       │   │   └── cache_models.py       # Modelo da tabela api_cache
-│       │   │
-│       │   ├── mappers/                  # DB Model <-> Domain Model
-│       │   │   ├── __init__.py
-│       │   │   ├── match_db_mapper.py
-│       │   │   ├── ticket_db_mapper.py
-│       │   │   └── prediction_db_mapper.py
-│       │   │
-│       │   └── repositories/             # Implementam Repository Contract
-│       │       ├── __init__.py
-│       │       ├── contracts/
-│       │       │   ├── __init__.py
-│       │       │   ├── match_repository_contract.py
-│       │       │   ├── ticket_repository_contract.py
-│       │       │   └── prediction_repository_contract.py
-│       │       │
-│       │       └── impl/
-│       │           ├── __init__.py
-│       │           ├── match_repository_impl.py
-│       │           ├── ticket_repository_impl.py
-│       │           └── prediction_repository_impl.py
-│       │
-│       ├── external/                     # Implementações Externas
-│       │   ├── __init__.py
-│       │   │
-│       │   ├── api_football/             # API-Football (Dados + Odds)
-│       │   │   ├── __init__.py
-│       │   │   ├── api_football_client.py        # HTTP Client
-│       │   │   ├── api_football_data_source_impl.py  # Implementa DataSourceContract
-│       │   │   ├── api_football_odds_provider_impl.py # Implementa OddsProviderContract
-│       │   │   ├── parsers/
-│       │   │   │   ├── __init__.py
-│       │   │   │   ├── fixture_parser.py
-│       │   │   │   ├── statistics_parser.py
-│       │   │   │   └── odds_parser.py
-│       │   │   └── mappers/
-│       │   │       ├── __init__.py
-│       │   │       ├── fixture_mapper.py
-│       │   │       └── odds_mapper.py
-│       │   │
-│       │   └── analyzers/                # Implementam Analyzer Contract
-│       │       ├── __init__.py
-│       │       ├── poisson_analyzer_impl.py
-│       │       └── xgboost_analyzer_impl.py
-│       │
-│       ├── scheduler/                    # ⏰ Jobs Agendados
-│       │   ├── __init__.py
-│       │   ├── scheduler_config.py       # Configuração APScheduler
-│       │   └── jobs/
-│       │       ├── __init__.py
-│       │       └── result_checker_job.py # Verifica resultados a cada 1h
-│       │
-│       ├── container.py                  # 🏭 Dependency Injection Container
-│       │
-│       └── logging/
-│           ├── __init__.py
-│           └── logger.py
-│
-├── web-app/                              # ⚛️ REACT UI
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   │
-│   └── src/
-│       ├── main.tsx
-│       ├── App.tsx
-│       │
-│       ├── api/                          # API Client
-│       │   ├── client.ts
-│       │   └── endpoints.ts
-│       │
-│       ├── components/
-│       │   ├── common/
-│       │   │   ├── Header.tsx
-│       │   │   ├── Sidebar.tsx
-│       │   │   └── Loading.tsx
-│       │   │
-│       │   ├── dashboard/
-│       │   │   ├── StatsCard.tsx
-│       │   │   └── RecentPredictions.tsx
-│       │   │
-│       │   ├── matches/
-│       │   │   ├── MatchList.tsx
-│       │   │   └── MatchCard.tsx
-│       │   │
-│       │   ├── predictions/
-│       │   │   ├── PredictionPanel.tsx
-│       │   │   ├── PredictionCard.tsx
-│       │   │   └── ConfidenceMeter.tsx
-│       │   │
-│       │   └── tickets/
-│       │       ├── TicketBuilder.tsx
-│       │       └── TicketHistory.tsx
-│       │
-│       ├── pages/
-│       │   ├── Dashboard.tsx
-│       │   ├── Matches.tsx
-│       │   ├── Predictions.tsx
-│       │   ├── Tickets.tsx
-│       │   └── Settings.tsx
-│       │
-│       ├── hooks/
-│       │   ├── useMatches.ts
-│       │   └── usePredictions.ts
-│       │
-│       ├── types/
-│       │   └── index.ts
-│       │
-│       └── styles/
-│           └── globals.css
-│
-├── scripts/                              # Scripts CLI de treinamento
-│   ├── download_historical_data.py       # Baixa CSVs Football-Data
-│   ├── prepare_dataset.py                # Gera features
-│   ├── train_model.py                    # Treina XGBoost
-│   └── evaluate_model.py                 # Avalia modelo
-│
-└── notebooks/                            # Jupyter notebooks
-    ├── 01_data_exploration.ipynb
-    ├── 02_feature_engineering.ipynb
-    └── 03_model_experiments.ipynb
+#### `GET /api/v1/tickets`
+Lista todos os bilhetes criados.
+
+**Response:**
+```json
+{
+  "success": true,
+  "tickets": [
+    {
+      "id": "uuid",
+      "name": "Bilhete 17/02/2026, 15:30",
+      "bookmaker_id": "bet365",
+      "stake": 100.0,
+      "total_odds": 6.84,
+      "potential_return": 684.0,
+      "status": "PENDING",
+      "result": null,
+      "created_at": "2026-02-17T15:30:00Z",
+      "bets": [
+        {
+          "match_id": "uuid1",
+          "match_name": "Flamengo vs Palmeiras",
+          "market_type": "1X2",
+          "prediction": "HOME",
+          "prediction_label": "Vitória Flamengo",
+          "odd": 2.10,
+          "confidence": 72.5,
+          "status": "PENDING",
+          "result": null,
+          "match_result": null
+        }
+      ]
+    }
+  ]
+}
 ```
 
-### 🚀 Scripts de Inicialização
+#### `POST /api/v1/tickets`
+Cria um novo bilhete.
 
-#### start.bat (Windows)
-
-```batch
-@echo off
-chcp 65001 >nul
-setlocal enabledelayedexpansion
-
-echo ========================================
-echo    BETTING BOT - Iniciando Sistema
-echo ========================================
-echo.
-
-REM ========================================
-REM CONFIGURAÇÕES
-REM ========================================
-set PYTHON_VERSION=3.14
-set PYTHON_INSTALLER=python-%PYTHON_VERSION%-amd64.exe
-set PYTHON_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%.0/%PYTHON_INSTALLER%
-set PYTHON_LOCAL=.cache\python\%PYTHON_INSTALLER%
-set PIP_CACHE_DIR=.cache\pip
-
-REM ========================================
-REM CRIA PASTA DE CACHE SE NÃO EXISTIR
-REM ========================================
-if not exist ".cache\" (
-    echo [CACHE] Criando pasta de cache local...
-    mkdir .cache
-    mkdir .cache\pip
-    mkdir .cache\python
-)
-
-REM ========================================
-REM VERIFICA/INSTALA PYTHON 3.14
-REM ========================================
-echo [PYTHON] Verificando Python %PYTHON_VERSION%...
-
-python --version 2>nul | findstr /C:"%PYTHON_VERSION%" >nul
-if errorlevel 1 (
-    echo [PYTHON] Python %PYTHON_VERSION% nao encontrado!
-    
-    REM Verifica se já tem o instalador em cache
-    if exist "%PYTHON_LOCAL%" (
-        echo [CACHE] Instalador encontrado em cache local.
-    ) else (
-        echo [DOWNLOAD] Baixando Python %PYTHON_VERSION%...
-        echo [DOWNLOAD] URL: %PYTHON_URL%
-        
-        REM Usa PowerShell para baixar
-        powershell -Command "Invoke-WebRequest -Uri '%PYTHON_URL%' -OutFile '%PYTHON_LOCAL%'"
-        
-        if not exist "%PYTHON_LOCAL%" (
-            echo [ERRO] Falha ao baixar Python. Verifique sua conexao.
-            pause
-            exit /b 1
-        )
-        echo [DOWNLOAD] Download concluido!
-    )
-    
-    echo [PYTHON] Instalando Python %PYTHON_VERSION%...
-    echo [PYTHON] IMPORTANTE: Marque "Add Python to PATH" durante a instalacao!
-    start /wait "" "%PYTHON_LOCAL%" /passive InstallAllUsers=0 PrependPath=1
-    
-    echo [PYTHON] Instalacao concluida! Reinicie este script.
-    pause
-    exit /b 0
-)
-
-echo [OK] Python %PYTHON_VERSION% encontrado
-echo.
-
-REM ========================================
-REM VERIFICA NODE.JS
-REM ========================================
-node --version >nul 2>&1
-if errorlevel 1 (
-    echo [ERRO] Node.js nao encontrado. Instale o Node.js 18+
-    echo [INFO] Download: https://nodejs.org/
-    pause
-    exit /b 1
-)
-
-echo [OK] Node.js encontrado
-echo.
-
-REM ========================================
-REM VERIFICA SE PASTA DATA EXISTE
-REM Se não existir, recria venv do zero
-REM ========================================
-if not exist "data\" (
-    echo [AVISO] Pasta data/ nao encontrada!
-    echo [VENV] Recriando ambiente virtual do zero...
-    
-    REM Remove venv antigo se existir
-    if exist ".venv\" (
-        echo [VENV] Removendo .venv antigo...
-        rmdir /s /q .venv
-    )
-    
-    REM Cria novo venv
-    echo [VENV] Criando novo ambiente virtual...
-    python -m venv .venv
-    
-    REM Ativa venv e instala dependências com cache
-    echo [VENV] Instalando dependencias (usando cache local)...
-    call .venv\Scripts\activate.bat
-    pip install --upgrade pip --cache-dir %PIP_CACHE_DIR%
-    pip install -r requirements.txt --cache-dir %PIP_CACHE_DIR%
-    
-    echo [VENV] Ambiente virtual criado com sucesso!
-    echo.
-) else (
-    REM Pasta data existe, verifica se venv existe
-    if not exist ".venv\" (
-        echo [VENV] Ambiente virtual nao encontrado. Criando...
-        python -m venv .venv
-        call .venv\Scripts\activate.bat
-        pip install --upgrade pip --cache-dir %PIP_CACHE_DIR%
-        pip install -r requirements.txt --cache-dir %PIP_CACHE_DIR%
-    ) else (
-        REM Ativa venv existente
-        call .venv\Scripts\activate.bat
-    )
-)
-
-echo.
-echo [OK] Ambiente virtual ativado
-echo [OK] Cache de libs em: %PIP_CACHE_DIR%
-echo.
-echo Iniciando o sistema...
-python main.py
-
-pause
+**Request Body:**
+```json
+{
+  "name": "Meu Bilhete",
+  "stake": 100.0,
+  "bookmaker_id": "bet365",
+  "bets": [
+    {
+      "match_id": "uuid1",
+      "match_name": "Flamengo vs Palmeiras",
+      "market_type": "1X2",
+      "prediction": "HOME",
+      "prediction_label": "Vitória Flamengo",
+      "odd": 2.10,
+      "confidence": 72.5
+    }
+  ]
+}
 ```
 
-#### start.sh (Linux/Mac)
+#### `GET /api/v1/tickets/stats/dashboard`
+Retorna estatísticas para o dashboard.
 
-```bash
-#!/bin/bash
-
-echo "========================================"
-echo "   BETTING BOT - Iniciando Sistema"
-echo "========================================"
-echo ""
-
-# ========================================
-# CONFIGURAÇÕES
-# ========================================
-PYTHON_VERSION="3.14"
-PIP_CACHE_DIR=".cache/pip"
-PYTHON_CACHE_DIR=".cache/python"
-
-# ========================================
-# CRIA PASTA DE CACHE SE NÃO EXISTIR
-# ========================================
-if [ ! -d ".cache" ]; then
-    echo "[CACHE] Criando pasta de cache local..."
-    mkdir -p .cache/pip
-    mkdir -p .cache/python
-fi
-
-# ========================================
-# VERIFICA/INSTALA PYTHON 3.14
-# ========================================
-echo "[PYTHON] Verificando Python $PYTHON_VERSION..."
-
-# Verifica se python3.14 está disponível
-if command -v python3.14 &> /dev/null; then
-    PYTHON_CMD="python3.14"
-    echo "[OK] Python $PYTHON_VERSION encontrado"
-elif python3 --version 2>&1 | grep -q "$PYTHON_VERSION"; then
-    PYTHON_CMD="python3"
-    echo "[OK] Python $PYTHON_VERSION encontrado"
-else
-    echo "[PYTHON] Python $PYTHON_VERSION nao encontrado!"
-    echo ""
-    
-    # Detecta o sistema operacional
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS - usa Homebrew
-        echo "[INFO] macOS detectado. Instalando via Homebrew..."
-        
-        if ! command -v brew &> /dev/null; then
-            echo "[ERRO] Homebrew nao encontrado. Instale em: https://brew.sh/"
-            exit 1
-        fi
-        
-        brew install python@3.14
-        PYTHON_CMD="python3.14"
-    else
-        # Linux - usa pyenv ou apt
-        echo "[INFO] Linux detectado."
-        echo ""
-        echo "Opcoes de instalacao:"
-        echo "  1. Ubuntu/Debian: sudo apt install python3.14"
-        echo "  2. Fedora: sudo dnf install python3.14"
-        echo "  3. Pyenv: pyenv install 3.14.0"
-        echo ""
-        echo "Apos instalar, execute este script novamente."
-        exit 1
-    fi
-fi
-
-echo ""
-
-# ========================================
-# VERIFICA NODE.JS
-# ========================================
-if ! command -v node &> /dev/null; then
-    echo "[ERRO] Node.js nao encontrado. Instale o Node.js 18+"
-    echo "[INFO] Download: https://nodejs.org/"
-    exit 1
-fi
-
-echo "[OK] Node.js encontrado"
-echo ""
-
-# ========================================
-# VERIFICA SE PASTA DATA EXISTE
-# Se não existir, recria venv do zero
-# ========================================
-if [ ! -d "data" ]; then
-    echo "[AVISO] Pasta data/ nao encontrada!"
-    echo "[VENV] Recriando ambiente virtual do zero..."
-    
-    # Remove venv antigo se existir
-    if [ -d ".venv" ]; then
-        echo "[VENV] Removendo .venv antigo..."
-        rm -rf .venv
-    fi
-    
-    # Cria novo venv
-    echo "[VENV] Criando novo ambiente virtual..."
-    $PYTHON_CMD -m venv .venv
-    
-    # Ativa venv e instala dependências com cache
-    echo "[VENV] Instalando dependencias (usando cache local)..."
-    source .venv/bin/activate
-    pip install --upgrade pip --cache-dir $PIP_CACHE_DIR
-    pip install -r requirements.txt --cache-dir $PIP_CACHE_DIR
-    
-    echo "[VENV] Ambiente virtual criado com sucesso!"
-    echo ""
-else
-    # Pasta data existe, verifica se venv existe
-    if [ ! -d ".venv" ]; then
-        echo "[VENV] Ambiente virtual nao encontrado. Criando..."
-        $PYTHON_CMD -m venv .venv
-        source .venv/bin/activate
-        pip install --upgrade pip --cache-dir $PIP_CACHE_DIR
-        pip install -r requirements.txt --cache-dir $PIP_CACHE_DIR
-    else
-        # Ativa venv existente
-        source .venv/bin/activate
-    fi
-fi
-
-echo ""
-echo "[OK] Ambiente virtual ativado"
-echo "[OK] Cache de libs em: $PIP_CACHE_DIR"
-echo ""
-echo "Iniciando o sistema..."
-python main.py
+**Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "total_tickets": 25,
+    "won_tickets": 18,
+    "lost_tickets": 5,
+    "pending_tickets": 2,
+    "success_rate": 78.26,
+    "total_staked": 2500.0,
+    "total_profit": 450.0
+  }
+}
 ```
 
-#### main.py (Entry Point)
+#### `POST /api/v1/tickets/{ticket_id}/simulate`
+Simula resultado de um bilhete (desenvolvimento).
 
-```python
-"""
-Betting Bot - Entry Point
-Inicializa o banco de dados (se necessário), API e React
-"""
-
-import os
-import sys
-import subprocess
-from pathlib import Path
-
-# Paths
-ROOT_DIR = Path(__file__).parent
-DATA_DIR = ROOT_DIR / "data"
-DB_PATH = DATA_DIR / "betting.db"
-
-
-def init_database():
-    """Inicializa o banco de dados se não existir"""
-    if not DB_PATH.exists():
-        print("[DB] Banco de dados não encontrado. Criando...")
-        
-        # Importa e executa o script de inicialização
-        sys.path.insert(0, str(DATA_DIR / "scripts"))
-        from init_database import create_database
-        
-        create_database(DB_PATH)
-        print(f"[DB] Banco de dados criado em: {DB_PATH}")
-    else:
-        print(f"[DB] Banco de dados encontrado: {DB_PATH}")
-
-
-def start_api():
-    """Inicia a API FastAPI"""
-    print("[API] Iniciando FastAPI na porta 8000...")
-    subprocess.Popen(
-        [sys.executable, "main.py"],
-        cwd=ROOT_DIR
-    )
-
-
-def start_react():
-    """Inicia o React App"""
-    print("[REACT] Iniciando React na porta 5173...")
-    web_app_dir = ROOT_DIR / "web_app"
-    
-    # Instala dependências se necessário
-    if not (web_app_dir / "node_modules").exists():
-        print("[REACT] Instalando dependências...")
-        subprocess.run(["npm", "install"], cwd=web_app_dir, shell=True)
-    
-    subprocess.Popen(
-        ["npm", "run", "dev"],
-        cwd=web_app_dir,
-        shell=True
-    )
-
-
-def main():
-    """Função principal"""
-    print("=" * 50)
-    print("       BETTING BOT - Sistema de Apostas")
-    print("=" * 50)
-    print()
-    
-    # 1. Inicializa banco de dados
-    init_database()
-    print()
-    
-    # 2. Inicia API
-    start_api()
-    print()
-    
-    # 3. Inicia React
-    start_react()
-    print()
-    
-    print("=" * 50)
-    print("Sistema iniciado!")
-    print("  - API: http://localhost:8000")
-    print("  - React: http://localhost:5173")
-    print("  - Docs: http://localhost:8000/docs")
-    print("=" * 50)
-    print()
-    print("Pressione Ctrl+C para encerrar...")
-    
-    # Mantém o processo rodando
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        print("\nEncerrando sistema...")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-#### data/scripts/init_database.py
-
-```python
-"""
-Script de inicialização do banco de dados
-Chamado pela main.py se o banco não existir
-"""
-
-import sqlite3
-from pathlib import Path
-
-
-def create_database(db_path: Path):
-    """Cria o banco de dados com todas as tabelas necessárias"""
-    
-    # Garante que o diretório existe
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # ==========================================
-    # ESTRATÉGIA DE IDs: UUID v4
-    # ==========================================
-    # Todos os IDs são UUID v4 gerados automaticamente pelo SQLite.
-    # Formato: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-    # A expressão DEFAULT gera UUID compatível com RFC 4122.
-    # Benefícios:
-    #   - IDs únicos globalmente (sem colisão)
-    #   - Não expõe quantidade de registros
-    #   - Seguro para APIs públicas
-    #   - Facilita merge de bancos diferentes
-    
-    # ==========================================
-    # TABELAS PRINCIPAIS
-    # ==========================================
-    
-    # Tabela de times
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS teams (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            external_id INTEGER UNIQUE,
-            name TEXT NOT NULL,
-            country TEXT,
-            logo_url TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Tabela de partidas
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS matches (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            external_id INTEGER UNIQUE,
-            home_team_id TEXT REFERENCES teams(id),
-            away_team_id TEXT REFERENCES teams(id),
-            league_id INTEGER,
-            league_name TEXT,
-            match_date DATETIME,
-            status TEXT DEFAULT 'SCHEDULED',
-            home_score INTEGER,
-            away_score INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Tabela de previsões
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS predictions (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            match_id TEXT REFERENCES matches(id),
-            market TEXT NOT NULL,
-            predicted_outcome TEXT NOT NULL,
-            confidence REAL NOT NULL,
-            odds REAL,
-            expected_value REAL,
-            recommendation TEXT,
-            status TEXT DEFAULT 'PENDING',
-            result TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Tabela de bilhetes
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS tickets (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            name TEXT,
-            stake REAL,
-            combined_odds REAL,
-            potential_return REAL,
-            status TEXT DEFAULT 'PENDING',
-            result TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # Tabela de associação bilhete-previsão
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ticket_predictions (
-            ticket_id TEXT REFERENCES tickets(id),
-            prediction_id TEXT REFERENCES predictions(id),
-            PRIMARY KEY (ticket_id, prediction_id)
-        )
-    """)
-    
-    # ==========================================
-    # TABELA DE CACHE DA API
-    # ==========================================
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS api_cache (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            cache_key TEXT UNIQUE NOT NULL,
-            endpoint TEXT NOT NULL,
-            response_data TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at DATETIME NOT NULL,
-            hit_count INTEGER DEFAULT 0
-        )
-    """)
-    
-    # ==========================================
-    # TABELA DE DADOS HISTÓRICOS (TREINAMENTO)
-    # ==========================================
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS historical_matches (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-            source TEXT NOT NULL,
-            season TEXT,
-            league TEXT,
-            match_date DATE,
-            home_team TEXT,
-            away_team TEXT,
-            home_goals INTEGER,
-            away_goals INTEGER,
-            result TEXT,
-            home_odds REAL,
-            draw_odds REAL,
-            away_odds REAL,
-            over25_odds REAL,
-            under25_odds REAL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # ==========================================
-    # ÍNDICES
-    # ==========================================
-    
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(match_date)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_match ON predictions(match_id)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_predictions_status ON predictions(status)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cache_key ON api_cache(cache_key)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cache_expires ON api_cache(expires_at)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_historical_date ON historical_matches(match_date)")
-    
-    conn.commit()
-    conn.close()
-    
-    print(f"[DB] Tabelas criadas com sucesso!")
-
-
-if __name__ == "__main__":
-    # Para testes diretos
-    import sys
-    if len(sys.argv) > 1:
-        create_database(Path(sys.argv[1]))
-    else:
-        print("Uso: python init_database.py <caminho_do_banco>")
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Resultado simulado com sucesso",
+  "ticket": {
+    "id": "uuid",
+    "status": "WON",
+    "result": {
+      "total_correct": 3,
+      "total_wrong": 0,
+      "profit": 584.0
+    }
+  }
+}
 ```
 
 ---
 
 ## 🔄 Fluxo de Dados
 
-### Conversão DTO → Domain Model → Response
+### 1️⃣ Carregar Jogos
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                    FLUXO: DTO → DOMAIN MODEL → RESPONSE                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  [1. REQUEST CHEGANDO]                                                   │
-│                                                                          │
-│  POST /api/v1/predictions/analyze                                        │
-│  Body: { "platform": "bet365", "league": "premier-league" }              │
-│                     │                                                    │
-│                     ▼                                                    │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ WEB LAYER                                                          │ │
-│  │                                                                    │ │
-│  │  PredictionController                                              │ │
-│  │    │                                                               │ │
-│  │    ├──▶ Valida PredictionRequestDTO (Pydantic)                    │ │
-│  │    │                                                               │ │
-│  │    ├──▶ PredictionMapper.to_domain(dto) ──▶ PredictionParams      │ │
-│  │    │                                        (Domain Model)         │ │
-│  │    │                                                               │ │
-│  │    └──▶ Chama IPredictionService.analyze(params)                  │ │
-│  │                        │                                           │ │
-│  └────────────────────────┼───────────────────────────────────────────┘ │
-│                           │                                              │
-│                           ▼ (via Interface)                              │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ APPLICATION LAYER                                                  │ │
-│  │                                                                    │ │
-│  │  PredictionService (implements IPredictionService)                 │ │
-│  │    │                                                               │ │
-│  │    ├──▶ Usa IPlatformFactory.create("bet365")                     │ │
-│  │    ├──▶ Usa IDataSourceFactory.create("sofascore")                │ │
-│  │    ├──▶ Usa IAnalyzerFactory.create("poisson")                    │ │
-│  │    │                                                               │ │
-│  │    └──▶ Retorna List[Prediction] (Domain Models)                  │ │
-│  │                        │                                           │ │
-│  └────────────────────────┼───────────────────────────────────────────┘ │
-│                           │                                              │
-│                           ▼                                              │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ WEB LAYER (Response)                                               │ │
-│  │                                                                    │ │
-│  │  PredictionController                                              │ │
-│  │    │                                                               │ │
-│  │    └──▶ PredictionMapper.to_response(predictions)                 │ │
-│  │                        │                                           │ │
-│  │                        ▼                                           │ │
-│  │         List[PredictionResponseDTO] ──▶ JSON Response             │ │
-│  │                                                                    │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+Frontend                 Backend
+   │                        │
+   ├─ GET /matches?─────────▶│
+   │  league_id=l1           │
+   │                         │
+   │                         ├─ Gera jogos mockados
+   │                         ├─ Ordena por data/hora
+   │                         ├─ Retorna JSON
+   │                         │
+   │◀────── 200 OK ──────────┤
+   │ { matches: [...] }      │
+   │                         │
+   ├─ Agrupa por data        │
+   ├─ Renderiza MatchList    │
+   └─ (collapse/expand)      │
 ```
 
-### Workflow do Usuário (Sob Demanda)
+### 2️⃣ Analisar Jogos
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                    FLUXO SOB DEMANDA                           │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  [Usuário no React]                                            │
-│         │                                                      │
-│         ▼                                                      │
-│  1. Seleciona Casa de Apostas (Bet365, Betfair, etc.)         │
-│         │                                                      │
-│         ▼                                                      │
-│  2. Seleciona Liga/Campeonato                                 │
-│         │                                                      │
-│         ▼                                                      │
-│  3. Clica "Analisar Jogos" ──────▶ POST /api/v1/analyze       │
-│         │                                                      │
-│         ▼                                                      │
-│  4. Backend:                                                   │
-│     • Factory cria DataSource (API-Football)                  │
-│     • Busca partidas e estatísticas                           │
-│     • Factory cria OddsProvider (API-Football)                │
-│     • Busca odds da casa selecionada                          │
-│     • Factory cria Analyzer (Poisson/XGBoost)                 │
-│     • Gera previsões                                          │
-│         │                                                      │
-│         ▼                                                      │
-│  5. Retorna bilhetes sugeridos para o Web App                 │
-│         │                                                      │
-│         ▼                                                      │
-│  6. Usuário visualiza/salva/exporta bilhetes                  │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+Frontend                 Backend
+   │                        │
+   ├─ Seleciona jogos       │
+   ├─ Escolhe estratégia    │
+   ├─ Clica "Analisar"      │
+   │                        │
+   ├─ POST /analyze ────────▶│
+   │ { match_ids, strategy }│
+   │                         │
+   │                         ├─ Busca jogos no cache
+   │                         ├─ Calcula previsões (mock)
+   │                         ├─ Aplica estratégia
+   │                         ├─ Cria pré-bilhete
+   │                         │
+   │◀────── 200 OK ──────────┤
+   │ { predictions, pre_ticket }
+   │                         │
+   ├─ Exibe PredictionPanel │
+   ├─ Mostra pré-bilhete    │
+   └─ Permite ajustes       │
+```
+
+### 3️⃣ Criar Bilhete
+
+```
+Frontend                 Backend
+   │                        │
+   ├─ Confirma apostas      │
+   ├─ Define stake          │
+   ├─ Clica "Criar Bilhete" │
+   │                        │
+   ├─ POST /tickets ────────▶│
+   │ { name, stake, bets }  │
+   │                         │
+   │                         ├─ Valida dados
+   │                         ├─ Cria ticket em memória
+   │                         ├─ Retorna ticket criado
+   │                         │
+   │◀────── 201 Created ─────┤
+   │ { ticket }              │
+   │                         │
+   ├─ Navega para /tickets  │
+   ├─ Exibe TicketHistory   │
+   └─ (aguarda resultado)   │
+```
+
+### 4️⃣ Simular Resultado (Dev)
+
+```
+Frontend                 Backend
+   │                        │
+   ├─ (5s após criar)       │
+   │                        │
+   ├─ POST /tickets/{id}/───▶│
+   │      simulate           │
+   │                         │
+   │                         ├─ Simula resultado (random)
+   │                         ├─ Atualiza status
+   │                         ├─ Calcula lucro/prejuízo
+   │                         │
+   │◀────── 200 OK ──────────┤
+   │ { ticket updated }      │
+   │                         │
+   ├─ Atualiza lista        │
+   └─ Destaca resultado     │
+      (verde=ganho, vermelho=perda)
 ```
 
 ---
 
-## 📜 Contratos (Contracts)
+## 🧩 Componentes Frontend
 
-### OddsProviderContract (Provedor de Odds)
+### Hierarquia de Componentes
 
-```python
-# domain/contracts/odds_provider_contract.py
-
-from abc import ABC, abstractmethod
-from typing import List, Dict
-from domain.models.match import Match
-from domain.models.value_objects.odds import Odds
-
-
-class OddsProviderContract(ABC):
-    """Contrato abstrato para provedores de odds"""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Nome do provedor"""
-        pass
-    
-    @abstractmethod
-    def get_odds(
-        self, 
-        fixture_id: int, 
-        bookmaker: str,
-        market: str
-    ) -> Odds:
-        """Retorna odds de uma casa específica para um mercado"""
-        pass
-    
-    @abstractmethod
-    def get_odds_all_bookmakers(
-        self, 
-        fixture_id: int, 
-        market: str
-    ) -> Dict[str, Odds]:
-        """Retorna odds de todas as casas para um mercado"""
-        pass
-    
-    @abstractmethod
-    def get_available_bookmakers(self) -> List[str]:
-        """Retorna casas de apostas disponíveis"""
-        pass
-    
-    @abstractmethod
-    def get_available_markets(self) -> List[str]:
-        """Retorna mercados disponíveis"""
-        pass
+```
+App.tsx (Providers)
+│
+├─ AppContext            (tab, strategy, selectedLeague)
+├─ BookmakerContext      (bookmakers, selectedBookmaker)
+├─ PredictionContext     (predictions, analyzing)
+└─ TicketContext         (tickets, preTicket)
+   │
+   ├─ Header.tsx         (navegação de tabs)
+   ├─ Sidebar.tsx        (menu lateral - futuro)
+   │
+   └─ Pages/
+      │
+      ├─ Dashboard.tsx   ─┬─ StatsCard.tsx (4x)
+      │                   └─ QuickGuide.tsx
+      │
+      ├─ Matches.tsx     ─┬─ MatchList.tsx
+      │                   │  ├─ Filtros (estratégia, liga, casa)
+      │                   │  ├─ Botão "Minimizar Todas"
+      │                   │  ├─ Grupos por data (collapse/expand)
+      │                   │  └─ MatchCard.tsx (N)
+      │                   │     ├─ Escudos (logo.url LOCAL/EXT)
+      │                   │     ├─ Data/hora
+      │                   │     ├─ Estádio
+      │                   │     └─ Odds (casa selecionada)
+      │                   │
+      │                   └─ Botão "Analisar Selecionados"
+      │
+      ├─ Predictions.tsx ─┬─ PredictionPanel.tsx
+      │                   │  └─ PredictionCard.tsx (N)
+      │                   │     ├─ ConfidenceMeter.tsx
+      │                   │     ├─ Mercados disponíveis
+      │                   │     └─ Checkbox para bilhete
+      │                   │
+      │                   └─ TicketBuilder.tsx (pré-bilhete)
+      │                      ├─ Lista de apostas
+      │                      ├─ Odds combinadas
+      │                      ├─ Stake
+      │                      └─ Botão "Criar Bilhete"
+      │
+      └─ Tickets.tsx     ─┬─ TicketBuilder.tsx (atual)
+                          │
+                          └─ TicketHistory.tsx
+                             └─ Card por ticket
+                                ├─ Status (PENDING/WON/LOST)
+                                ├─ Lista de apostas
+                                │  └─ Icones (✓ green / ✗ red)
+                                ├─ Odds + Stake
+                                └─ Resultado final
 ```
 
-### DataSourceContract (Fontes de Dados)
+### Componentes Chave
 
-```python
-# domain/contracts/data_source_contract.py
+#### MatchCard.tsx
+```typescript
+// Exibe um jogo individual
+interface MatchCardProps {
+  match: Match;
+  isSelected: boolean;
+  onSelect: (matchId: string) => void;
+  selectedBookmaker: string;
+}
 
-from abc import ABC, abstractmethod
-from typing import List
-from domain.models.match import Match
-from domain.models.team import Team
-
-
-class DataSourceContract(ABC):
-    """Contrato abstrato para fontes de dados estatísticos"""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Nome da fonte de dados"""
-        pass
-    
-    @abstractmethod
-    def get_team_stats(self, team_id: str) -> Team:
-        """Retorna estatísticas do time"""
-        pass
-    
-    @abstractmethod
-    def get_head_to_head(self, team1_id: str, team2_id: str) -> List[Match]:
-        """Retorna histórico de confrontos"""
-        pass
-    
-    @abstractmethod
-    def get_team_form(self, team_id: str, num_matches: int = 5) -> List[Match]:
-        """Retorna últimos jogos do time"""
-        pass
+// Features:
+// - Escudos dos times (via backend /static/escudos/)
+// - LogoDTO (LOCAL ou EXT)
+// - Data/hora formatada (pt-BR)
+// - Estádio real do time mandante
+// - Odds da casa selecionada
+// - Click para selecionar
 ```
 
-### AnalyzerContract (Analisadores/IA)
-
-```python
-# domain/contracts/analyzer_contract.py
-
-from abc import ABC, abstractmethod
-from typing import List
-from domain.models.match import Match
-from domain.models.prediction import Prediction
-
-
-class AnalyzerContract(ABC):
-    """Contrato abstrato para analisadores/modelos de IA"""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Nome do analisador"""
-        pass
-    
-    @abstractmethod
-    def analyze(self, match: Match, market: str) -> Prediction:
-        """Analisa uma partida e retorna previsão"""
-        pass
-    
-    @abstractmethod
-    def get_supported_markets(self) -> List[str]:
-        """Retorna mercados suportados pelo analisador"""
-        pass
+#### MatchList.tsx
+```typescript
+// Lista com filtros e agrupamento por data
+// Features:
+// - Filtros: estratégia, liga, casa
+// - Agrupamento por data com collapse/expand
+// - Botão "Minimizar/Expandir Todas"
+// - Ícones: ▼ (expandido) / ► (colapsado)
+// - Headers de data com contador de jogos
+// - Ordenação por data e horário
 ```
 
-### OddsProviderFactoryContract (Factory de Provedores de Odds)
-
-```python
-# domain/factories/contracts/odds_provider_factory_contract.py
-
-from abc import ABC, abstractmethod
-from typing import List
-from domain.contracts.odds_provider_contract import OddsProviderContract
-
-
-class OddsProviderFactoryContract(ABC):
-    """Contrato abstrato para factory de provedores de odds"""
-    
-    @abstractmethod
-    def create(self, provider_name: str) -> OddsProviderContract:
-        """Cria instância do provedor de odds"""
-        pass
-    
-    @abstractmethod
-    def get_available(self) -> List[str]:
-        """Lista provedores disponíveis"""
-        pass
+#### PredictionCard.tsx
+```typescript
+// Exibe previsão de um jogo
+// Features:
+// - Múltiplos mercados (1X2, Over/Under, BTTS)
+// - Confiança visual (ConfidenceMeter)
+// - Value Bet % destacado
+// - Checkbox para incluir no bilhete
+// - Explicação da previsão (futuro: via IA)
 ```
 
-### RepositoryContract (Repositórios)
-
-```python
-# domain/contracts/repository_contract.py
-
-from abc import ABC, abstractmethod
-from typing import List, Optional, TypeVar, Generic
-
-T = TypeVar('T')
-
-
-class RepositoryContract(ABC, Generic[T]):
-    """Contrato genérico para repositórios"""
-    
-    @abstractmethod
-    def get_by_id(self, entity_id: str) -> Optional[T]:
-        """Busca entidade por ID"""
-        pass
-    
-    @abstractmethod
-    def get_all(self, limit: int = 100) -> List[T]:
-        """Retorna todas as entidades"""
-        pass
-    
-    @abstractmethod
-    def save(self, entity: T) -> T:
-        """Salva uma entidade"""
-        pass
-    
-    @abstractmethod
-    def delete(self, entity_id: str) -> bool:
-        """Remove uma entidade"""
-        pass
-```
-
-### PredictionServiceContract (Application Service)
-
-```python
-# application/contracts/prediction_service_contract.py
-
-from abc import ABC, abstractmethod
-from typing import List
-from domain.models.prediction import Prediction
-from domain.models.prediction_params import PredictionParams
-
-
-class PredictionServiceContract(ABC):
-    """Contrato para o serviço de previsões"""
-    
-    @abstractmethod
-    def analyze(self, params: PredictionParams) -> List[Prediction]:
-        """Executa análise e retorna previsões"""
-        pass
-    
-    @abstractmethod
-    def get_by_id(self, prediction_id: str) -> Prediction:
-        """Busca previsão por ID"""
-        pass
-    
-    @abstractmethod
-    def get_history(self, limit: int = 50) -> List[Prediction]:
-        """Retorna histórico de previsões"""
-        pass
+#### TicketHistory.tsx
+```typescript
+// Lista de bilhetes criados
+// Features:
+// - Agrupamento por status
+// - Destaque de apostas ganhas/perdidas
+// - Cálculo de lucro/prejuízo
+// - Simulação automática após 5s (dev)
+// - Indicadores visuais (✓/✗)
 ```
 
 ---
 
-## 🏭 Padrões de Projeto
+## ⚡ Estado Global (Contexts)
 
-### Factory Pattern
-
-```python
-# domain/factories/impl/data_source_factory_impl.py
-
-from typing import Dict, Type, List
-from domain.factories.contracts.data_source_factory_contract import DataSourceFactoryContract
-from domain.contracts.data_source_contract import DataSourceContract
-
-
-class DataSourceFactoryImpl(DataSourceFactoryContract):
-    """Implementação concreta da factory de fontes de dados"""
-    
-    def __init__(self):
-        self._data_sources: Dict[str, Type[DataSourceContract]] = {}
-    
-    def register(self, name: str, data_source_class: Type[DataSourceContract]) -> None:
-        """Registra uma fonte de dados"""
-        self._data_sources[name.lower()] = data_source_class
-    
-    def create(self, data_source_name: str) -> DataSourceContract:
-        """Cria instância da fonte de dados"""
-        data_source_class = self._data_sources.get(data_source_name.lower())
-        
-        if not data_source_class:
-            raise ValueError(
-                f"Fonte de dados '{data_source_name}' não registrada. "
-                f"Disponíveis: {self.get_available()}"
-            )
-        
-        return data_source_class()
-    
-    def get_available(self) -> List[str]:
-        """Lista fontes de dados disponíveis"""
-        return list(self._data_sources.keys())
+### AppContext
+```typescript
+// Estado geral da aplicação
+{
+  activeTab: 'matches' | 'predictions' | 'tickets' | 'dashboard',
+  strategy: 'BALANCED' | 'CONSERVATIVE' | 'VALUE_BET' | 'AGGRESSIVE',
+  selectedLeague: string,
+  setActiveTab,
+  setStrategy,
+  setSelectedLeague
+}
 ```
 
-### Dependency Injection Container
-
-```python
-# infrastructure/container.py
-
-from domain.factories.contracts.odds_provider_factory_contract import OddsProviderFactoryContract
-from domain.factories.contracts.data_source_factory_contract import DataSourceFactoryContract
-from domain.factories.contracts.analyzer_factory_contract import AnalyzerFactoryContract
-from infrastructure.database.repositories.contracts.prediction_repository_contract import PredictionRepositoryContract
-
-from domain.factories.impl.odds_provider_factory_impl import OddsProviderFactoryImpl
-from domain.factories.impl.data_source_factory_impl import DataSourceFactoryImpl
-from domain.factories.impl.analyzer_factory_impl import AnalyzerFactoryImpl
-
-from infrastructure.database.repositories.impl.prediction_repository_impl import PredictionRepositoryImpl
-from infrastructure.external.api_football.api_football_data_source_impl import ApiFootballDataSourceImpl
-from infrastructure.external.api_football.api_football_odds_provider_impl import ApiFootballOddsProviderImpl
-from infrastructure.external.analyzers.poisson_analyzer_impl import PoissonAnalyzerImpl
-
-from application.contracts.prediction_service_contract import PredictionServiceContract
-from application.impl.prediction_service_impl import PredictionServiceImpl
-
-
-class Container:
-    """Dependency Injection Container"""
-    
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialize()
-        return cls._instance
-    
-    def _initialize(self):
-        """Inicializa e registra todas as dependências"""
-        
-        # Factories
-        self._odds_provider_factory = OddsProviderFactoryImpl()
-        self._odds_provider_factory.register("api_football", ApiFootballOddsProviderImpl)
-        
-        self._data_source_factory = DataSourceFactoryImpl()
-        self._data_source_factory.register("api_football", ApiFootballDataSourceImpl)
-        
-        self._analyzer_factory = AnalyzerFactoryImpl()
-        self._analyzer_factory.register("poisson", PoissonAnalyzerImpl)
-        
-        # Repositories
-        self._prediction_repository = PredictionRepositoryImpl()
-        
-        # Services
-        self._prediction_service = PredictionServiceImpl(
-            odds_provider_factory=self._odds_provider_factory,
-            data_source_factory=self._data_source_factory,
-            analyzer_factory=self._analyzer_factory,
-            prediction_repository=self._prediction_repository
-        )
-    
-    # Getters retornam contracts, não implementações
-    
-    def get_odds_provider_factory(self) -> OddsProviderFactoryContract:
-        return self._odds_provider_factory
-    
-    def get_data_source_factory(self) -> DataSourceFactoryContract:
-        return self._data_source_factory
-    
-    def get_prediction_service(self) -> PredictionServiceContract:
-        return self._prediction_service
-
-
-# Singleton instance
-container = Container()
+### BookmakerContext
+```typescript
+// Casas de apostas
+{
+  bookmakers: Bookmaker[],
+  selectedBookmaker: string,  // 'bet365' por padrão
+  setSelectedBookmaker,
+  loadBookmakers  // GET /bookmakers
+}
 ```
 
-### Mapper Pattern (DTO ↔ Domain Model)
+### PredictionContext
+```typescript
+// Previsões e análises
+{
+  predictions: Prediction[],
+  analyzing: boolean,
+  analyzeMatches: (matchIds, strategy) => Promise<void>,  // POST /analyze
+  clearPredictions
+}
+```
 
-```python
-# web/mappers/prediction_mapper.py
-
-from typing import List
-from datetime import date
-
-from web.dtos.requests.prediction_request import PredictionRequestDTO
-from web.dtos.responses.prediction_response import PredictionResponseDTO
-from domain.models.prediction import Prediction
-from domain.models.prediction_params import PredictionParams
-
-
-class PredictionMapper:
-    """Mapper: DTO <-> Domain Model"""
-    
-    @staticmethod
-    def to_domain(dto: PredictionRequestDTO) -> PredictionParams:
-        """Converte DTO de request para Domain Model"""
-        return PredictionParams(
-            bookmaker=dto.bookmaker,
-            league=dto.league,
-            match_date=dto.match_date or date.today(),
-            markets=dto.markets
-        )
-    
-    @staticmethod
-    def to_response(prediction: Prediction) -> PredictionResponseDTO:
-        """Converte Domain Model para DTO de response"""
-        return PredictionResponseDTO(
-            id=prediction.id,
-            match_id=prediction.match.id,
-            home_team=prediction.match.home_team.name,
-            away_team=prediction.match.away_team.name,
-            market=prediction.market,
-            predicted_outcome=prediction.predicted_outcome,
-            confidence=prediction.confidence.value,
-            odds=prediction.odds.value,
-            expected_value=prediction.expected_value,
-            recommendation=prediction.get_recommendation(),
-            created_at=prediction.created_at.isoformat()
-        )
+### TicketContext
+```typescript
+// Bilhetes
+{
+  tickets: Ticket[],
+  preTicket: PreTicket | null,
+  ticketsInBet: Set<string>,
+  addToBet,
+  removeFromBet,
+  createTicket,  // POST /tickets
+  loadTickets,   // GET /tickets
+  simulateResult  // POST /tickets/{id}/simulate
+}
 ```
 
 ---
 
-## 🧩 Componentes
+## 🚀 Próximos Passos
 
-### Camadas e Responsabilidades
+### Fase 2: Integração com API-Football
 
-| Camada | Responsabilidade |
-|--------|------------------|
-| **Web** | Controllers, DTOs, Mappers, Validação de entrada, React UI |
-| **Application** | Interfaces de Services, Orquestração, Casos de uso |
-| **Domain** | Regras de negócio, Models, Interfaces, Factories, Utils |
-| **Infrastructure** | Banco de dados, APIs externas, Configs, Logging, DI Container |
+#### Backend
+- [ ] Implementar cliente HTTP para API-Football
+- [ ] Sistema de cache com TTL por tipo de dado
+- [ ] Parser de fixtures e estatísticas
+- [ ] Parser de odds de múltiplas casas
+- [ ] Mapeamento de ligas e times reais
 
-### Mercados de Futebol (MVP)
-
-| Mercado | Código | Descrição |
-|---------|--------|-----------|
-| Match Result | `1X2` | Resultado final |
-| Over/Under | `OU_2.5` | Mais/menos de X gols |
-| Both Teams Score | `BTTS` | Ambas marcam |
-| Double Chance | `DC` | Dupla chance |
-| Draw No Bet | `DNB` | Empate não aposta |
-
-### Stack Tecnológica
-
-| Componente | Tecnologia |
-|------------|------------|
-| Linguagem Backend | Python 3.11+ |
-| Framework API | FastAPI |
-| Banco de Dados | SQLite + SQLAlchemy |
-| Frontend | React + Vite + TypeScript |
-| IA/ML | scikit-learn, XGBoost |
-| HTTP Client | httpx, requests |
-| Validação | Pydantic |
-
----
-
-## 🔒 Regras de Dependência
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  DEPENDENCY RULES                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│                        DOMAIN                                   │
-│                   (Contracts + Models)                          │
-│                          ▲                                      │
-│                          │                                      │
-│         ┌────────────────┼────────────────┐                    │
-│         │                │                │                    │
-│         │                │                │                    │
-│    APPLICATION     INFRASTRUCTURE       WEB                    │
-│    (implements     (implements        (usa via                 │
-│     Service        OddsProvider,      Contract)                │
-│     Contract)      DataSource,                                 │
-│                    Repository,                                 │
-│                    Analyzer)                                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Regras
-
-✅ **Domain Layer** não depende de nenhuma outra camada  
-✅ **Application Layer** depende apenas de contracts do Domain  
-✅ **Infrastructure Layer** implementa contracts do Domain  
-✅ **Web Layer** depende de Application via contracts  
-✅ **DTOs** existem apenas na Web Layer  
-✅ **Domain Models** são usados internamente entre camadas  
-✅ **Todas as camadas acessam outras via Contract, nunca implementação**
-
----
-
-## 📌 MVP (Fase 1)
-
-- ✅ Fonte de Dados e Odds: API-Football
-- ✅ Casas de Apostas: Bet365, Betfair, 1xBet (via API-Football)
-- ✅ Esporte: Futebol
-- ✅ Mercados: 1X2, Over/Under 2.5, BTTS
-- ✅ IA Preditiva: Modelo estatístico (Poisson) + XGBoost
-- ✅ Dados Históricos: Football-Data.co.uk (treino) + API-Football (atualização)
-- ✅ Estratégias de Apostas: Conservador, Value Bet, Agressivo, Balanceado
-- ✅ Interface: React Web App
-- ✅ DB: SQLite (auto-init)
-- ✅ Cache: TTL diferenciado por tipo de dado (economia de ~70% requests)
-- ✅ Limite: 100 requests/dia (plano gratuito)
-- ✅ Verificação automática de resultados (scheduler)
-
----
-
-## 🎯 Estratégias de Apostas
-
-O usuário pode escolher a estratégia de ordenação das sugestões de apostas, definindo qual critério terá prioridade.
-
-### Estratégias Disponíveis
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    🎯 ESTRATÉGIAS DE APOSTAS                                │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   🛡️ CONSERVADOR (Maior Confiança)                                 │  │
-│   │   ─────────────────────────────────                                │  │
-│   │                                                                     │  │
-│   │   Ordenação: confidence DESC                                       │  │
-│   │   Prioriza: Apostas com maior chance de acertar                   │  │
-│   │   Perfil: Odds menores, lucro menor, mais consistente             │  │
-│   │   Ideal para: Acumuladores, iniciantes, quem quer consistência    │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   📊 VALUE BET (Maior Valor Matemático)                            │  │
-│   │   ─────────────────────────────────────                            │  │
-│   │                                                                     │  │
-│   │   Ordenação: expected_value DESC                                   │  │
-│   │   Prioriza: Apostas com maior valor esperado (edge sobre a casa)  │  │
-│   │   Perfil: Melhor retorno a longo prazo                            │  │
-│   │   Ideal para: Apostadores experientes, estratégia de longo prazo  │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   🎰 AGRESSIVO (Maior Retorno Potencial)                           │  │
-│   │   ──────────────────────────────────────                           │  │
-│   │                                                                     │  │
-│   │   Ordenação: (odds * confidence) DESC                              │  │
-│   │   Prioriza: Odds altas com confiança razoável                     │  │
-│   │   Perfil: Maior risco, maior recompensa                           │  │
-│   │   Ideal para: Bilhetes de alto risco, apostas ocasionais          │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   ⚖️ BALANCEADO (Score Combinado) - PADRÃO                         │  │
-│   │   ────────────────────────────────────────                         │  │
-│   │                                                                     │  │
-│   │   Ordenação: score DESC                                            │  │
-│   │   Fórmula: (confidence × 0.4) + (expected_value × 0.4)            │  │
-│   │            + (normalized_odds × 0.2)                               │  │
-│   │   Prioriza: Equilíbrio entre todos os fatores                     │  │
-│   │   Ideal para: Maioria dos usuários, uso geral                     │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Comparativo das Estratégias
-
-| Estratégia | Ordenação | Risco | Retorno | Consistência |
-|------------|-----------|-------|---------|--------------|
-| 🛡️ Conservador | `confidence DESC` | Baixo | Baixo | Alta |
-| 📊 Value Bet | `expected_value DESC` | Médio | Médio-Alto | Média |
-| 🎰 Agressivo | `odds * confidence DESC` | Alto | Alto | Baixa |
-| ⚖️ Balanceado | `score DESC` | Médio | Médio | Média |
-
-### Implementação na Arquitetura
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    📦 IMPLEMENTAÇÃO                                         │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   DOMAIN LAYER                                                     │  │
-│   │   ────────────                                                     │  │
-│   │   web_api/domain/models/betting_strategy.py                       │  │
-│   │                                                                     │  │
-│   │   class BettingStrategy(Enum):                                    │  │
-│   │       CONSERVATIVE = "conservative"  # Maior confiança            │  │
-│   │       VALUE_BET = "value_bet"        # Maior valor esperado       │  │
-│   │       AGGRESSIVE = "aggressive"      # Maior retorno potencial    │  │
-│   │       BALANCED = "balanced"          # Score combinado (padrão)   │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   DOMAIN LAYER - UTILS                                             │  │
-│   │   ────────────────────                                             │  │
-│   │   web_api/domain/utils/strategy_sorter_util.py                    │  │
-│   │                                                                     │  │
-│   │   def sort_by_strategy(predictions, strategy: BettingStrategy):   │  │
-│   │       if strategy == CONSERVATIVE:                                 │  │
-│   │           return sorted(predictions, key=lambda p: p.confidence,  │  │
-│   │                        reverse=True)                               │  │
-│   │       elif strategy == VALUE_BET:                                  │  │
-│   │           return sorted(predictions, key=lambda p: p.expected_value│ │
-│   │                        reverse=True)                               │  │
-│   │       elif strategy == AGGRESSIVE:                                 │  │
-│   │           return sorted(predictions,                               │  │
-│   │                        key=lambda p: p.odds * p.confidence,       │  │
-│   │                        reverse=True)                               │  │
-│   │       else:  # BALANCED                                           │  │
-│   │           return sorted(predictions,                               │  │
-│   │                        key=lambda p: calculate_score(p),          │  │
-│   │                        reverse=True)                               │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   APPLICATION LAYER                                                │  │
-│   │   ─────────────────                                                │  │
-│   │   web_api/application/impl/prediction_service_impl.py             │  │
-│   │                                                                     │  │
-│   │   def analyze(self, params: AnalyzeParams) -> List[Prediction]:   │  │
-│   │       predictions = self._generate_predictions(params)            │  │
-│   │       # Ordena de acordo com a estratégia escolhida               │  │
-│   │       return sort_by_strategy(predictions, params.strategy)       │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   WEB LAYER - REQUEST DTO                                          │  │
-│   │   ───────────────────────                                          │  │
-│   │   web_api/web/dtos/requests/prediction_request.py                 │  │
-│   │                                                                     │  │
-│   │   class PredictionRequestDTO(BaseModel):                          │  │
-│   │       platform: str                                                │  │
-│   │       league: str                                                  │  │
-│   │       markets: List[str]                                          │  │
-│   │       strategy: str = "balanced"  # Estratégia padrão             │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🗄️ Cache da API-Football
-
-O sistema utiliza cache local (SQLite) para reduzir o consumo de requests da API-Football, respeitando o limite de 100 requests/dia do plano gratuito.
-
-### Estratégia: TTL Diferenciado por Tipo de Dado
-
-Cada tipo de dado tem um tempo de expiração (TTL) baseado na frequência real de atualização na fonte:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    🗄️ ESTRATÉGIA DE CACHE                                   │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   CONFIGURAÇÃO DE TTL POR ENDPOINT                                 │  │
-│   │   ────────────────────────────────                                 │  │
-│   │                                                                     │  │
-│   │   Endpoint              │ TTL      │ Justificativa                 │  │
-│   │   ──────────────────────┼──────────┼─────────────────────────────  │  │
-│   │   /leagues              │ 30 dias  │ Dados estáticos               │  │
-│   │   /teams                │ 30 dias  │ Dados estáticos               │  │
-│   │   /fixtures/headtohead  │ 7 dias   │ Histórico, raramente muda     │  │
-│   │   /teams/statistics     │ 24 horas │ Atualiza após cada rodada     │  │
-│   │   /fixtures             │ 6 horas  │ Jogos agendados mudam pouco   │  │
-│   │   /odds                 │ 30 min   │ Atualiza frequentemente       │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   ECONOMIA DE REQUESTS                                             │  │
-│   │   ────────────────────────                                         │  │
-│   │                                                                     │  │
-│   │   Endpoint              │ Sem Cache │ Com Cache │ Economia         │  │
-│   │   ──────────────────────┼───────────┼───────────┼────────────────  │  │
-│   │   /leagues              │ 1/análise │ 1/mês     │ ~99%             │  │
-│   │   /teams                │ 1/análise │ 1/mês     │ ~99%             │  │
-│   │   /fixtures/headtohead  │ 2/análise │ 2/semana  │ ~95%             │  │
-│   │   /teams/statistics     │ 2/análise │ 2/dia     │ ~80%             │  │
-│   │   /fixtures             │ 1/análise │ 4/dia     │ ~70%             │  │
-│   │   /odds                 │ 1/análise │ 2/hora    │ ~50%             │  │
-│   │                                                                     │  │
-│   │   TOTAL: ~41 req/análise → ~8-15 req/análise (~70% economia)      │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Impacto na Capacidade Diária
-
-| Métrica | Sem Cache | Com Cache |
-|---------|-----------|-----------|
-| **Requests por análise (10 jogos)** | ~41 | ~8-15 |
-| **Análises por dia** | ~2 | ~6-12 |
-| **Bilhetes triplos por dia** | ~7 | ~20-30 |
-
-### Estrutura da Tabela de Cache
-
+#### Tabela de Cache
 ```sql
--- Tabela: api_cache
--- Nota: SQLite gera UUID v4 automaticamente via expressão DEFAULT
 CREATE TABLE api_cache (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
-    cache_key TEXT UNIQUE NOT NULL,      -- Ex: "teams_statistics_123_2026"
-    endpoint TEXT NOT NULL,               -- Ex: "/teams/statistics"
-    response_data TEXT NOT NULL,          -- JSON da resposta
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,         -- created_at + TTL
-    hit_count INTEGER DEFAULT 0           -- Quantas vezes foi usado
+    id UUID PRIMARY KEY,
+    cache_key VARCHAR(255) UNIQUE NOT NULL,
+    data TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_cache_key ON api_cache(cache_key);
 CREATE INDEX idx_expires_at ON api_cache(expires_at);
 ```
 
-### Fluxo de Cache
+#### TTLs Recomendados
+| Tipo de Dado | TTL | Motivo |
+|--------------|-----|--------|
+| Fixtures (futuros) | 6 horas | Pouco mudança |
+| Odds | 30 minutos | Mudam frequentemente |
+| Estatísticas time | 24 horas | Atualiza por rodada |
+| Histórico H2H | 7 dias | Não muda |
+| Previsões API | 12 horas | Comparação |
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    🔄 FLUXO DE CACHE                                        │
-│                                                                             │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   1. REQUISIÇÃO CHEGA                                              │  │
-│   │   ──────────────────────                                           │  │
-│   │                                                                     │  │
-│   │   api_football_client.get_team_statistics(team_id=123)            │  │
-│   │                                                                     │  │
-│   └──────────────────────────────┬──────────────────────────────────────┘  │
-│                                  │                                          │
-│                                  ▼                                          │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   2. VERIFICA CACHE                                                │  │
-│   │   ─────────────────                                                │  │
-│   │                                                                     │  │
-│   │   cache_key = "teams_statistics_123_2026"                          │  │
-│   │   cached = cache_repository.get(cache_key)                         │  │
-│   │                                                                     │  │
-│   │   if cached and not cached.is_expired:                             │  │
-│   │       return cached.response_data  # ✅ CACHE HIT                  │  │
-│   │                                                                     │  │
-│   └──────────────────────────────┬──────────────────────────────────────┘  │
-│                                  │                                          │
-│                          CACHE MISS                                         │
-│                                  │                                          │
-│                                  ▼                                          │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   3. CHAMA API-FOOTBALL                                            │  │
-│   │   ─────────────────────                                            │  │
-│   │                                                                     │  │
-│   │   response = http_client.get("/teams/statistics?team=123")         │  │
-│   │                                                                     │  │
-│   └──────────────────────────────┬──────────────────────────────────────┘  │
-│                                  │                                          │
-│                                  ▼                                          │
-│   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                                                                     │  │
-│   │   4. SALVA NO CACHE                                                │  │
-│   │   ─────────────────                                                │  │
-│   │                                                                     │  │
-│   │   ttl = CACHE_TTL["/teams/statistics"]  # 24 horas                │  │
-│   │   cache_repository.save(                                           │  │
-│   │       cache_key=cache_key,                                         │  │
-│   │       endpoint="/teams/statistics",                                │  │
-│   │       response_data=response.json(),                               │  │
-│   │       expires_at=now() + ttl                                       │  │
-│   │   )                                                                │  │
-│   │                                                                     │  │
-│   │   return response.json()                                           │  │
-│   │                                                                     │  │
-│   └─────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### Fase 3: Modelos de IA
 
-### Configuração de TTL (código)
+#### Implementar
+- [ ] Modelo Poisson para Over/Under e BTTS
+- [ ] Modelo XGBoost para Resultado 1X2
+- [ ] Ensemble (combinação dos dois)
+- [ ] Value Bet Calculator
+- [ ] Sistema de confiança ajustável por estratégia
 
-```python
-# infrastructure/database/cache/cache_config.py
+#### Dataset
+- [ ] Baixar CSVs históricos (Football-Data.co.uk)
+- [ ] Feature engineering
+- [ ] Treinar modelo inicial
+- [ ] Pipeline de atualização contínua
 
-from datetime import timedelta
+### Fase 4: Melhorias UX
 
-CACHE_TTL = {
-    # Dados estáticos (raramente mudam)
-    "/leagues": timedelta(days=30),
-    "/teams": timedelta(days=30),
-    
-    # Dados históricos
-    "/fixtures/headtohead": timedelta(days=7),
-    
-    # Dados que mudam por rodada
-    "/teams/statistics": timedelta(hours=24),
-    
-    # Dados de jogos agendados
-    "/fixtures": timedelta(hours=6),
-    
-    # Odds (atualizam frequentemente)
-    "/odds": timedelta(minutes=30),
-}
+- [ ] Explicação das previsões via IA (texto gerado)
+- [ ] Gráficos de histórico de H2H
+- [ ] Filtros avançados (por odds, confiança, value)
+- [ ] Modo escuro/claro
+- [ ] Export de bilhetes (PDF/Imagem)
+- [ ] Notificações de resultado
 
-def get_ttl_for_endpoint(endpoint: str) -> timedelta:
-    """Retorna TTL para um endpoint, default 1 hora"""
-    for key, ttl in CACHE_TTL.items():
-        if key in endpoint:
-            return ttl
-    return timedelta(hours=1)
-```
+### Fase 5: Banco de Dados
 
-### Limpeza de Cache Expirado
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                    🧹 LIMPEZA AUTOMÁTICA                                    │
-│                                                                             │
-│   Job agendado para rodar a cada 1 hora:                                   │
-│                                                                             │
-│   DELETE FROM api_cache WHERE expires_at < CURRENT_TIMESTAMP;              │
-│                                                                             │
-│   Isso mantém o banco limpo e evita crescimento indefinido.                │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+- [ ] Migrar de mock para SQLite
+- [ ] Persistir bilhetes
+- [ ] Histórico de previsões
+- [ ] Estatísticas de acurácia
+- [ ] Logs de uso
 
 ---
 
-## ⏰ Scheduler de Verificação de Resultados
+## 📊 Métricas do Projeto
 
-O sistema possui um job agendado que roda periodicamente para verificar os resultados dos jogos.
+### Código Frontend
 
-### Funcionamento
+| Arquivo | Linhas | Descrição |
+|---------|--------|-----------|
+| `globals.css` | 1594 | CSS completo |
+| `MatchList.tsx` | 233 | Lista com collapse |
+| `TicketHistory.tsx` | 198 | Histórico de bilhetes |
+| `Matches.tsx` | 189 | Página de jogos |
+| `PredictionPanel.tsx` | 187 | Painel de previsões |
+| `Tickets.tsx` | 178 | Página de bilhetes |
+| **Total Frontend** | **~3500** | TypeScript + CSS |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    RESULT CHECKER SCHEDULER                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Frequência: A cada 1 hora                                      │
-│  Tecnologia: APScheduler                                        │
-│                                                                 │
-│  Fluxo:                                                         │
-│  ───────                                                        │
-│  1. Busca previsões com status "PENDING"                       │
-│  2. Filtra jogos que já terminaram (datetime + 2h)             │
-│  3. Para cada jogo:                                             │
-│     • GET /fixtures?id={fixture_id} na API-Football            │
-│     • Extrai resultado (score)                                  │
-│     • Compara com previsão                                      │
-│     • Atualiza status: WON ou LOST                             │
-│  4. Recalcula estatísticas (ROI, hit rate)                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Código Backend
 
-### Estrutura (Application Layer)
+| Arquivo | Linhas | Descrição |
+|---------|--------|-----------|
+| `match_controller.py` | 480 | Controller de jogos |
+| `prediction_controller.py` | 310 | Controller de previsões |
+| `ticket_controller.py` | 280 | Controller de bilhetes |
+| `match_response.py` | 146 | DTOs de resposta |
+| **Total Backend** | **~1300** | Python (mock) |
 
-```python
-# application/contracts/result_checker_service_contract.py
+### Assets
 
-class ResultCheckerServiceContract(ABC):
-    
-    @abstractmethod
-    def check_pending_predictions(self) -> int:
-        """Verifica previsões pendentes e retorna quantidade atualizada"""
-        pass
-    
-    @abstractmethod
-    def verify_single_prediction(self, prediction_id: str) -> bool:
-        """Verifica uma previsão específica"""
-        pass
-```
-
-### Regras de Verificação por Mercado
-
-| Mercado | Previsão | Condição de Acerto |
-|---------|----------|-------------------|
-| 1X2 | HOME (1) | home_score > away_score |
-| 1X2 | DRAW (X) | home_score == away_score |
-| 1X2 | AWAY (2) | away_score > home_score |
-| Over 2.5 | OVER | total_goals > 2 |
-| Over 2.5 | UNDER | total_goals < 3 |
-| BTTS | YES | home_score > 0 AND away_score > 0 |
-| BTTS | NO | home_score == 0 OR away_score == 0 |
+| Tipo | Quantidade |
+|------|------------|
+| **Escudos PNG** | 130+ |
+| **Componentes React** | 15 |
+| **Contexts** | 4 |
+| **Endpoints API** | 9 |
+| **DTOs** | 12 |
 
 ---
 
-## 🚀 Próximos Passos
+## 🎉 Conclusão
 
-1. [ ] Configurar conta na API-Football (RapidAPI)
-2. [ ] Implementar Domain Models e Contracts
-3. [ ] Implementar Infrastructure (DB, API-Football Client)
-4. [ ] Implementar Application Services
-5. [ ] Implementar Result Checker Service + Scheduler
-6. [ ] Implementar Web Layer (Controllers, DTOs)
-7. [ ] Implementar Web App React
-8. [ ] Testes unitários e integração
-9. [ ] Deploy
+O sistema está com a **POC completa implementada**, incluindo:
 
----
+✅ Frontend totalmente funcional  
+✅ Backend com controllers mockados  
+✅ Estrutura de dados bem definida  
+✅ Fluxo de usuário completo  
+✅ Visual profissional  
+✅ Pronto para integração com API-Football  
+✅ Pronto para implementação dos modelos de IA  
 
-*Documento gerado em 2026-02-14*
+**Próximo passo:** Integrar API-Football e implementar cache! 🚀
 

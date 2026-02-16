@@ -2,8 +2,10 @@
 Betting Advisor API - Backend Mockado
 """
 
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from web.controllers.match_controller import router as match_router
 from web.controllers.prediction_controller import router as prediction_router
@@ -14,6 +16,13 @@ app = FastAPI(
     description="API para análise e sugestão de apostas esportivas (MOCK)",
     version="1.0.0"
 )
+
+# Configurar diretório de arquivos estáticos
+STATIC_DIR = Path(__file__).parent.parent / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+
+# Montar arquivos estáticos (escudos dos times)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # CORS
 app.add_middleware(

@@ -7,11 +7,6 @@ echo ""
 
 cd "$(dirname "$0")"
 
-# Verifica se a pasta data existe na raiz do projeto
-if [ ! -d "../data" ]; then
-    echo "[INFO] Criando pasta data..."
-    mkdir -p "../data"
-fi
 
 # Procura Python
 PYTHON_CMD=""

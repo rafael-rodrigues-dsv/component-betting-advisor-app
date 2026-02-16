@@ -5,13 +5,15 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+from .logo_dto import LogoDTO
+
 
 class TeamResponse(BaseModel):
     """Time"""
     id: str
     name: str
-    logo: str
-    country: str
+    logo: LogoDTO
+    country: str = "Brazil"
 
 
 class LeagueResponse(BaseModel):
@@ -19,7 +21,7 @@ class LeagueResponse(BaseModel):
     id: str
     name: str
     country: str
-    logo: str
+    logo: str  # Mantém como string (emoji)
     type: str  # "league" ou "cup"
 
 
@@ -27,7 +29,7 @@ class BookmakerResponse(BaseModel):
     """Casa de apostas"""
     id: str
     name: str
-    logo: str
+    logo: str  # Mantém como string (emoji)
 
 
 class VenueResponse(BaseModel):

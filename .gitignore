@@ -1,24 +1,53 @@
-# Ambiente
+# Ambiente Python
 .venv/
 __pycache__/
 *.pyc
+*.pyo
 .env
+.env.local
 
-# Frontend
-webapp/node_modules/
+# Frontend - Node/React
+node_modules/
 web_app/node_modules/
 web_app/dist/
 web_app/.vite/
+webapp/node_modules/
+dist/
+.vite/
+*.local
+
+# Build
+build/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
 
 # IDE
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
 
 # Data
 data/
 *.db
+*.sqlite
+*.sqlite3
 
 # Cache
 .cache/
+.npm/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testes
+test_*.py
+!test_imports.py
 
