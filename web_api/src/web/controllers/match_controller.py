@@ -8,6 +8,12 @@ from datetime import datetime
 import random
 import uuid
 
+from web.dtos.responses.match_response import (
+    MatchesListResponse,
+    LeaguesListResponse,
+    BookmakersListResponse
+)
+
 router = APIRouter()
 
 # Mock data - Times por Liga
@@ -302,7 +308,7 @@ def _generate_matches(date: str, league_id: Optional[str] = None) -> list:
 
 @router.get("/matches")
 async def get_matches(
-    date: Optional[str] = Query(None),
+    date: Optional[str] = Query(None, description="Data no formato YYYY-MM-D"),
     league_id: Optional[str] = Query(None, description="Filtrar por ID da liga")
 ):
     """Lista jogos disponíveis para análise"""
@@ -310,19 +316,35 @@ async def get_matches(
         date = datetime.now().strftime("%Y-%m-%d")
 
     matches = _generate_matches(date, league_id)
-    return {"success": True, "date": date, "count": len(matches), "matches": matches}
+
+    print(f"[DEBUG] Data: {date}, League: {league_id}, Total jogos: {len(matches)}")
+
+    return {
+        "success": True,
+        "date": date,
+        "count": len(matches),
+        "matches": matches
+    }
 
 
-@router.get("/leagues")
-async def get_leagues():
+@router.get("/leagues", response_model=LeaguesListResponse)
+async def get_leagues() -> LeaguesListResponse:
     """Lista campeonatos disponíveis"""
-    return {"success": True, "count": len(LEAGUES), "leagues": LEAGUES}
+    return LeaguesListResponse(
+        success=True,
+        count=len(LEAGUES),
+        leagues=LEAGUES
+    )
 
 
-@router.get("/bookmakers")
-async def get_bookmakers():
+@router.get("/bookmakers", response_model=BookmakersListResponse)
+async def get_bookmakers() -> BookmakersListResponse:
     """Lista casas de apostas disponíveis"""
-    return {"success": True, "count": len(BOOKMAKERS), "bookmakers": BOOKMAKERS}
+    return BookmakersListResponse(
+        success=True,
+        count=len(BOOKMAKERS),
+        bookmakers=BOOKMAKERS
+    )
 
 
 @router.get("/matches/{match_id}")

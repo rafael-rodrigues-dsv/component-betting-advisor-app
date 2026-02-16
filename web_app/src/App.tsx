@@ -74,12 +74,24 @@ function App() {
   const loadTickets = async () => {
     setLoading(true);
     try {
+      console.log('[DEBUG] Carregando bilhetes...');
       const data = await ticketApi.getTickets();
-      setTickets(data.tickets);
+      console.log('[DEBUG] Resposta da API:', data);
+
+      // Valida se tickets é um array
+      if (data && Array.isArray(data.tickets)) {
+        setTickets(data.tickets);
+        console.log('[DEBUG] Bilhetes carregados:', data.tickets.length);
+      } else {
+        console.error('[DEBUG] Formato inválido:', data);
+        setTickets([]);
+      }
     } catch (error) {
       console.error('Erro ao carregar bilhetes:', error);
+      setTickets([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const toggleMatchSelection = (matchId: string) => {
@@ -93,17 +105,36 @@ function App() {
   };
 
   const analyzeMatches = async () => {
-    if (selectedMatches.size === 0) return;
-
-    setAnalyzing(true);
-    try {
-      const data = await predictionApi.analyze(Array.from(selectedMatches), strategy);
-      setPredictions(data.predictions);
-      setActiveTab('predictions');
-    } catch (error) {
-      console.error('Erro ao analisar:', error);
+    if (selectedMatches.size === 0) {
+      console.log('[DEBUG] Nenhum jogo selecionado');
+      return;
     }
-    setAnalyzing(false);
+
+    console.log('[DEBUG] Analisando', selectedMatches.size, 'jogos');
+    setAnalyzing(true);
+
+    try {
+      const matchIds = Array.from(selectedMatches);
+      console.log('[DEBUG] IDs:', matchIds);
+      console.log('[DEBUG] Estratégia:', strategy);
+
+      const data = await predictionApi.analyze(matchIds, strategy);
+      console.log('[DEBUG] Previsões recebidas:', data);
+
+      if (data && data.predictions && Array.isArray(data.predictions)) {
+        setPredictions(data.predictions);
+        setActiveTab('predictions');
+        console.log('[DEBUG] Mudou para aba predictions');
+      } else {
+        console.error('[DEBUG] Formato de resposta inválido:', data);
+        alert('Erro: Resposta da API em formato inválido');
+      }
+    } catch (error) {
+      console.error('[ERROR] Erro ao analisar:', error);
+      alert(`Erro ao analisar jogos: ${error}`);
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const addToTicket = (prediction: Prediction, market: MarketPrediction) => {
@@ -111,6 +142,7 @@ function App() {
       match_id: prediction.match_id,
       home_team: prediction.home_team,
       away_team: prediction.away_team,
+      league: prediction.league,  // ✅ Adicionado campo obrigatório
       market: market.market,
       predicted_outcome: market.predicted_outcome,
       odds: market.odds,
@@ -135,12 +167,16 @@ function App() {
     if (ticketBets.length === 0 || stake <= 0) return;
 
     try {
-      await ticketApi.createTicket(null, stake, ticketBets);
+      console.log('[DEBUG] Criando bilhete...', { bets: ticketBets.length, stake });
+      const ticketName = `Bilhete ${new Date().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+      const response = await ticketApi.createTicket(ticketName, stake, ticketBets, selectedBookmaker !== 'all' ? selectedBookmaker : 'bet365');
+      console.log('[DEBUG] Bilhete criado:', response);
       setTicketBets([]);
       setActiveTab('tickets');
-      loadTickets();
+      await loadTickets();
     } catch (error) {
       console.error('Erro ao criar bilhete:', error);
+      alert('Erro ao criar bilhete. Verifique o console para mais detalhes.');
     }
   };
 
@@ -166,27 +202,50 @@ function App() {
   const combinedOdds = ticketBets.reduce((acc, bet) => acc * bet.odds, 1);
   const potentialReturn = stake * combinedOdds;
 
+  // Traduz mercados para português simples
   const formatMarket = (market: string) => {
     const names: Record<string, string> = {
-      '1X2': 'Resultado',
-      'OVER_UNDER_25': 'Gols',
-      'BTTS': 'Ambas Marcam',
+      'MATCH_WINNER': '⚽ Resultado Final',
+      '1X2': '⚽ Resultado Final',
+      'OVER_UNDER': '🎯 Total de Gols',
+      'OVER_UNDER_25': '🎯 Total de Gols',
+      'BTTS': '⚡ Ambos Marcam',
     };
     return names[market] || market;
   };
 
+  // Traduz resultados para português simples
   const formatOutcome = (market: string, outcome: string) => {
-    if (market === '1X2') {
-      const names: Record<string, string> = { HOME: 'Casa', DRAW: 'Empate', AWAY: 'Fora' };
+    if (market === 'MATCH_WINNER' || market === '1X2') {
+      const names: Record<string, string> = {
+        HOME: '🏠 Vitória do Mandante',
+        DRAW: '🤝 Empate',
+        AWAY: '✈️ Vitória do Visitante'
+      };
       return names[outcome] || outcome;
     }
-    if (market === 'OVER_UNDER_25') {
-      return outcome === 'OVER' ? 'Mais de 2.5' : 'Menos de 2.5';
+    if (market === 'OVER_UNDER' || market === 'OVER_UNDER_25') {
+      return outcome === 'OVER' ? '⬆️ Mais de 2.5 gols' : '⬇️ Menos de 2.5 gols';
     }
     if (market === 'BTTS') {
-      return outcome === 'YES' ? 'Sim' : 'Não';
+      return outcome === 'YES' ? '✅ Sim' : '❌ Não';
     }
     return outcome;
+  };
+
+  // Traduz recomendações para português
+  const formatRecommendation = (recommendation: string) => {
+    const names: Record<string, string> = {
+      'STRONG_BET': '🔥 Aposta Forte',
+      'RECOMMENDED': '✅ Recomendada',
+      'CONSIDER': '💭 Considerar',
+      'AVOID': '⛔ Evitar',
+      'VALUE_BET': '💰 Value Bet',
+      'RISKY': '⚠️ Arriscada',
+      'MARGINAL': '📊 Marginal',
+      'SKIP': '🚫 Pular'
+    };
+    return names[recommendation] || recommendation;
   };
 
   return (
@@ -419,6 +478,7 @@ function App() {
                         </div>
                         <div className="market-stats">
                           <div className="market-confidence">
+                            <label className="stat-label">Confiança</label>
                             <div className="confidence-bar">
                               <div
                                 className="confidence-fill"
@@ -427,19 +487,25 @@ function App() {
                             </div>
                             <span className="confidence-text">{(market.confidence * 100).toFixed(0)}%</span>
                           </div>
-                          <div className="market-odds">{market.odds}</div>
+                          <div className="market-odds-block">
+                            <label className="stat-label">Cotação</label>
+                            <div className="market-odds">{market.odds.toFixed(2)}</div>
+                          </div>
                           <div className={`market-ev ${market.expected_value >= 0 ? 'ev-positive' : 'ev-negative'}`}>
-                            {market.expected_value >= 0 ? '+' : ''}{(market.expected_value * 100).toFixed(1)}%
+                            <label className="stat-label">Value</label>
+                            <span className="ev-value">
+                              {market.expected_value >= 0 ? '+' : ''}{(market.expected_value * 100).toFixed(1)}%
+                            </span>
                           </div>
                           <span className={`recommendation-badge recommendation-${market.recommendation}`}>
-                            {market.recommendation.replace('_', ' ')}
+                            {formatRecommendation(market.recommendation)}
                           </span>
                         </div>
                         <button
                           className="add-to-ticket-btn"
                           onClick={() => addToTicket(pred, market)}
                         >
-                          + Adicionar ao Bilhete
+                          ➕ Adicionar ao Bilhete
                         </button>
                       </div>
                     ))}

@@ -74,20 +74,21 @@ export interface Prediction {
   home_team: string;
   away_team: string;
   league: string;
-  match_date: string;
+  date: string;  // Backend usa "date", não "match_date"
   predictions: MarketPrediction[];
-  best_bet: MarketPrediction | null;
-  created_at: string;
+  strategy_used: string;  // Novo campo do backend
 }
 
 export interface TicketBet {
   match_id: string;
   home_team: string;
   away_team: string;
+  league: string;  // Campo obrigatório no backend
   market: string;
   predicted_outcome: string;
   odds: number;
   confidence: number;
+  result?: string | null;  // Opcional, preenchido após simular
 }
 
 export interface Ticket {
@@ -96,9 +97,9 @@ export interface Ticket {
   stake: number;
   combined_odds: number;
   potential_return: number;
-  status: string;
-  result: string | null;
-  profit?: number;
+  bookmaker_id: string;  // Novo campo do backend
+  status: string;  // "PENDING", "WON", "LOST"
+  profit?: number;  // Opcional, preenchido após resultado
   bets: TicketBet[];
   created_at: string;
 }
@@ -147,8 +148,13 @@ export const predictionApi = {
 };
 
 export const ticketApi = {
-  createTicket: async (name: string | null, stake: number, bets: TicketBet[]) => {
-    const response = await api.post('/tickets', { name, stake, bets });
+  createTicket: async (name: string, stake: number, bets: TicketBet[], bookmakerId: string = 'bet365') => {
+    const response = await api.post('/tickets', {
+      name,
+      stake,
+      bets,
+      bookmaker_id: bookmakerId
+    });
     return response.data;
   },
 

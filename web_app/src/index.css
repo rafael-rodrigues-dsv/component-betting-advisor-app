@@ -32,6 +32,20 @@ body {
   max-width: 1600px;
   margin: 0 auto;
   padding: 24px;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Garantir que nunca fique com tela branca */
+.app::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, #0f1323 100%);
+  z-index: -1;
 }
 
 /* Header */
@@ -605,13 +619,31 @@ body {
   display: flex;
   gap: 24px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
 }
 
 .market-confidence {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.market-odds-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .confidence-bar {
@@ -631,13 +663,13 @@ body {
 }
 
 .confidence-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 .market-odds {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--odds-color);
   min-width: 60px;
@@ -645,24 +677,37 @@ body {
 }
 
 .market-ev {
-  font-size: 14px;
-  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-weight: 700;
-  min-width: 70px;
+  min-width: 80px;
   text-align: center;
+}
+
+.ev-value {
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .ev-positive {
   background: rgba(16, 185, 129, 0.15);
-  color: var(--success);
   border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.ev-positive .ev-value {
+  color: var(--success);
 }
 
 .ev-negative {
   background: rgba(239, 68, 68, 0.15);
-  color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.ev-negative .ev-value {
+  color: var(--danger);
 }
 
 .recommendation-badge {

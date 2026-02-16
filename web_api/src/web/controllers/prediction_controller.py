@@ -3,19 +3,23 @@ Prediction Controller - Análise e previsões (MOCK)
 """
 
 from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 import random
 import uuid
 import asyncio
 
+from web.dtos.requests.prediction_request import AnalyzeMatchesRequest
+from web.dtos.responses.prediction_response import (
+    AnalyzePredictionsResponse,
+    PredictionResponse,
+    PredictionDetailResponse,
+    MarketPredictionResponse,
+    MarketEnum,
+    RecommendationEnum
+)
+
 router = APIRouter()
-
-
-class AnalyzeRequest(BaseModel):
-    match_ids: List[str]
-    strategy: str = "BALANCED"
 
 
 MOCK_TEAMS = [
@@ -31,29 +35,29 @@ MOCK_TEAMS = [
 
 
 def _get_recommendation(ev: float, confidence: float) -> str:
+    """Retorna recomendação baseada no EV e confiança"""
     if ev > 0.10 and confidence > 0.60:
         return "STRONG_BET"
     elif ev > 0.05 and confidence > 0.50:
-        return "VALUE_BET"
-    elif ev > 0.05:
-        return "RISKY"
+        return "RECOMMENDED"
     elif ev > 0:
-        return "MARGINAL"
-    return "SKIP"
+        return "CONSIDER"
+    else:
+        return "AVOID"
 
 
-def _sort_predictions(predictions: list, strategy: str) -> list:
+def _sort_predictions(predictions: List[MarketPredictionResponse], strategy: str) -> List[MarketPredictionResponse]:
     if strategy == "CONSERVATIVE":
-        return sorted(predictions, key=lambda x: x["confidence"], reverse=True)
+        return sorted(predictions, key=lambda x: x.confidence, reverse=True)
     elif strategy == "VALUE_BET":
-        return sorted(predictions, key=lambda x: x["expected_value"], reverse=True)
+        return sorted(predictions, key=lambda x: x.expected_value, reverse=True)
     elif strategy == "AGGRESSIVE":
-        return sorted(predictions, key=lambda x: x["odds"] * x["confidence"], reverse=True)
+        return sorted(predictions, key=lambda x: x.odds * x.confidence, reverse=True)
     else:  # BALANCED
-        return sorted(predictions, key=lambda x: (x["expected_value"] * 0.5) + (x["confidence"] * 0.5), reverse=True)
+        return sorted(predictions, key=lambda x: (x.expected_value * 0.5) + (x.confidence * 0.5), reverse=True)
 
 
-def _generate_prediction(match_id: str, strategy: str) -> dict:
+def _generate_prediction(match_id: str, strategy: str) -> PredictionResponse:
     """Gera previsão mockada"""
     home, away = random.choice(MOCK_TEAMS)
 
@@ -71,7 +75,7 @@ def _generate_prediction(match_id: str, strategy: str) -> dict:
 
     predictions = []
 
-    # 1X2
+    # 1X2 - Match Winner
     best = max([
         ("HOME", home_prob, home_odds),
         ("DRAW", draw_prob, draw_odds),
@@ -79,67 +83,72 @@ def _generate_prediction(match_id: str, strategy: str) -> dict:
     ], key=lambda x: (x[1] * x[2]) - 1)
 
     ev = (best[1] * best[2]) - 1
-    predictions.append({
-        "market": "1X2",
-        "predicted_outcome": best[0],
-        "confidence": round(best[1], 2),
-        "odds": best[2],
-        "expected_value": round(ev, 3),
-        "recommendation": _get_recommendation(ev, best[1])
-    })
+    predictions.append(MarketPredictionResponse(
+        market=MarketEnum.MATCH_WINNER,
+        predicted_outcome=best[0],
+        confidence=round(best[1], 2),
+        odds=best[2],
+        expected_value=round(ev, 3),
+        recommendation=RecommendationEnum(_get_recommendation(ev, best[1]))
+    ))
 
     # Over/Under 2.5
     over_prob = random.uniform(0.45, 0.65)
     ev_over = (over_prob * over_odds) - 1
-    predictions.append({
-        "market": "OVER_UNDER_25",
-        "predicted_outcome": "OVER" if over_prob > 0.5 else "UNDER",
-        "confidence": round(over_prob if over_prob > 0.5 else 1 - over_prob, 2),
-        "odds": over_odds,
-        "expected_value": round(ev_over, 3),
-        "recommendation": _get_recommendation(ev_over, over_prob)
-    })
+    predictions.append(MarketPredictionResponse(
+        market=MarketEnum.OVER_UNDER,
+        predicted_outcome="OVER" if over_prob > 0.5 else "UNDER",
+        confidence=round(over_prob if over_prob > 0.5 else 1 - over_prob, 2),
+        odds=over_odds,
+        expected_value=round(ev_over, 3),
+        recommendation=RecommendationEnum(_get_recommendation(ev_over, over_prob))
+    ))
 
     # BTTS
     btts_prob = random.uniform(0.45, 0.60)
     ev_btts = (btts_prob * btts_odds) - 1
-    predictions.append({
-        "market": "BTTS",
-        "predicted_outcome": "YES" if btts_prob > 0.5 else "NO",
-        "confidence": round(btts_prob if btts_prob > 0.5 else 1 - btts_prob, 2),
-        "odds": btts_odds,
-        "expected_value": round(ev_btts, 3),
-        "recommendation": _get_recommendation(ev_btts, btts_prob)
-    })
+    predictions.append(MarketPredictionResponse(
+        market=MarketEnum.BTTS,
+        predicted_outcome="YES" if btts_prob > 0.5 else "NO",
+        confidence=round(btts_prob if btts_prob > 0.5 else 1 - btts_prob, 2),
+        odds=btts_odds,
+        expected_value=round(ev_btts, 3),
+        recommendation=RecommendationEnum(_get_recommendation(ev_btts, btts_prob))
+    ))
 
     predictions = _sort_predictions(predictions, strategy)
 
-    return {
-        "id": str(uuid.uuid4()),
-        "match_id": match_id,
-        "home_team": home,
-        "away_team": away,
-        "league": "Brasileirão Série A",
-        "match_date": datetime.now().isoformat(),
-        "predictions": predictions,
-        "best_bet": predictions[0] if predictions else None,
-        "created_at": datetime.now().isoformat()
-    }
+    return PredictionResponse(
+        id=str(uuid.uuid4()),
+        match_id=match_id,
+        home_team=home,
+        away_team=away,
+        league="Brasileirão Série A",
+        date=datetime.now().isoformat(),
+        predictions=predictions,
+        strategy_used=strategy
+    )
 
 
 @router.post("/analyze")
-async def analyze_matches(request: AnalyzeRequest):
+async def analyze_matches(request: AnalyzeMatchesRequest):
     """Analisa jogos e retorna previsões"""
+    print(f"[DEBUG] Analisando {len(request.match_ids)} jogos com estratégia {request.strategy}")
+
     await asyncio.sleep(len(request.match_ids) * 0.3)  # Simula processamento
 
-    results = [_generate_prediction(mid, request.strategy) for mid in request.match_ids]
+    results = [_generate_prediction(mid, request.strategy.value) for mid in request.match_ids]
 
-    return {
+    print(f"[DEBUG] Geradas {len(results)} previsões")
+
+    response = {
         "success": True,
-        "strategy": request.strategy,
+        "strategy": request.strategy.value,
         "count": len(results),
-        "predictions": results
+        "predictions": [pred.model_dump() for pred in results]
     }
+
+    return response
 
 
 @router.get("/predictions")
@@ -149,10 +158,9 @@ async def get_predictions(limit: int = 10):
     return {"success": True, "count": len(predictions), "predictions": predictions}
 
 
-@router.get("/predictions/{prediction_id}")
-async def get_prediction(prediction_id: str):
+@router.get("/predictions/{prediction_id}", response_model=PredictionDetailResponse)
+async def get_prediction(prediction_id: str) -> PredictionDetailResponse:
     """Detalhes de uma previsão"""
     pred = _generate_prediction(str(uuid.uuid4()), "BALANCED")
-    pred["id"] = prediction_id
-    return {"success": True, "prediction": pred}
+    return PredictionDetailResponse(success=True, prediction=pred)
 
