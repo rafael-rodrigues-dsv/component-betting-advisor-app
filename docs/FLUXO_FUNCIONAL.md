@@ -1,10 +1,10 @@
-# 🔄 Betting Bot - Fluxo Funcional (V2)
+# 🔄 Betting Bot - Fluxo Funcional
 
-> Fluxo funcional real implementado na POC
+> Fluxo funcional real implementado - Sistema baseado em análise inteligente de odds
 
 **Data:** 2026-02-17  
 **Versão:** 2.0.0  
-**Status:** ✅ Implementado
+**Status:** ✅ Implementado (mockado) | ⏳ API-Football (próxima etapa)
 
 ---
 
@@ -23,12 +23,31 @@
 
 ## 🎯 Visão Geral
 
-O sistema segue um fluxo linear e intuitivo:
+O sistema segue um fluxo linear e intuitivo com análise inteligente de odds:
 
 ```
 Dashboard → Jogos → Análise → Previsões → Bilhete → Acompanhamento
     ↓         ↓        ↓          ↓          ↓           ↓
 Estatísticas Filtros Estratégia Mercados  Confirmar  Resultados
+                      (Odds)    (Value Bet)
+```
+
+### Abordagem do Sistema
+
+**Sistema baseado em análise inteligente de odds da API-Football:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   API-Football → Fixtures + Odds → Análise por Estratégia → Recomendações  │
+│                                                                             │
+│   ✅ Dados reais (jogos, odds, times)                                       │
+│   ✅ Comparação entre casas (Bet365, Betano, etc.)                          │
+│   ✅ Análise inteligente sem IA complexa                                    │
+│   ✅ Identificação de value bets                                            │
+│   ✅ 4 estratégias personalizadas                                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -121,10 +140,14 @@ Estatísticas Filtros Estratégia Mercados  Confirmar  Resultados
 │                                                                             │
 │   Backend processa:                                                         │
 │   ├─ Busca dados dos jogos selecionados                                    │
-│   ├─ Calcula previsões (mock com dados realistas)                          │
-│   ├─ Aplica estratégia escolhida                                           │
-│   ├─ Calcula value bet para cada mercado                                   │
-│   ├─ Ordena por relevância (estratégia)                                    │
+│   ├─ Busca odds de múltiplas casas (API-Football)                          │
+│   ├─ Aplica estratégia escolhida:                                          │
+│   │  • CONSERVATIVE: Favoritos seguros                                     │
+│   │  • VALUE_BET: Comparação entre casas                                   │
+│   │  • BALANCED: Favorito + value                                          │
+│   │  • AGGRESSIVE: Odds altas (zebras)                                     │
+│   ├─ Calcula value bet % entre casas                                       │
+│   ├─ Identifica melhor casa de apostas                                     │
 │   └─ Cria pré-bilhete automaticamente                                      │
 │                                                                             │
 │   [Navegação automática para aba "Previsões"] ──────────────────▶          │
@@ -485,17 +508,21 @@ Sistema processa jogos selecionados e gera previsões.
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 3. Backend processa (prediction_controller.py)                              │
 │    ├─ Busca dados dos jogos no MATCHES_CACHE                                │
+│    ├─ Busca odds de Bet365 e Betano (API-Football)                          │
 │    ├─ Para cada jogo:                                                       │
-│    │  ├─ Calcula previsões por mercado (mockado)                            │
-│    │  ├─ Confiança baseada em força dos times                               │
-│    │  ├─ Value Bet % = (confiança - odd_implícita) / odd_implícita          │
-│    │  └─ Risk Level baseado em odd                                          │
-│    │                                                                         │
-│    ├─ Aplica estratégia para ordenar/filtrar:                               │
-│    │  ├─ BALANCED: confiança >= 65% e value_bet >= 5%                       │
-│    │  ├─ CONSERVATIVE: confiança >= 75%                                     │
-│    │  ├─ VALUE_BET: value_bet >= 10%                                        │
-│    │  └─ AGGRESSIVE: odd >= 2.5                                             │
+│    │  ├─ Analisa baseado na estratégia:                                     │
+│    │  │  • CONSERVATIVE: Favorito (menor odd 1.50-2.00)                     │
+│    │  │  • VALUE_BET: Compara odds entre casas (>= 5% diff)                 │
+│    │  │  • BALANCED: Favorito com value (>= 3% diff)                        │
+│    │  │  • AGGRESSIVE: Zebras (odd >= 2.50)                                 │
+│    │  │                                                                      │
+│    │  ├─ Calcula confiança:                                                 │
+│    │  │  confiança = (1 / odd) × 100 × 1.06 (ajuste margem)                │
+│    │  │                                                                      │
+│    │  ├─ Calcula value bet:                                                 │
+│    │  │  value% = ((melhor_odd - média_odd) / média_odd) × 100              │
+│    │  │                                                                      │
+│    │  └─ Identifica melhor casa (maior odd)                                 │
 │    │                                                                         │
 │    └─ Cria pré-bilhete com melhor aposta por jogo                           │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -553,49 +580,68 @@ Sistema processa jogos selecionados e gera previsões.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Cálculo de Métricas (Mockado)
+### Cálculo de Métricas (Baseado em Odds)
 
 ```python
 # Backend - prediction_controller.py
 
-def _calculate_confidence(home_team, away_team, prediction):
-    """Calcula confiança baseada em força dos times (mockado)"""
-    base_confidence = random.uniform(60, 80)
+def _calculate_confidence_from_odd(odd: float) -> float:
+    """
+    Calcula confiança baseada na odd (probabilidade implícita)
     
-    # Ajusta baseado em G12/G6
-    if home_team['name'] in G12_BRASILEIRAO and prediction == "HOME":
-        base_confidence += random.uniform(5, 15)
-    elif away_team['name'] in G12_BRASILEIRAO and prediction == "AWAY":
-        base_confidence += random.uniform(3, 10)
+    Odd 1.50 → 66.7% de confiança
+    Odd 2.00 → 50.0% de confiança
+    Odd 3.00 → 33.3% de confiança
+    """
+    implied_probability = (1 / odd) * 100
     
-    return min(base_confidence, 95)
+    # Ajusta para remover margem da casa (~6%)
+    adjusted_probability = implied_probability * 1.06
+    
+    # Limita entre 10% e 90%
+    return max(10, min(90, adjusted_probability))
 
-def _calculate_value_bet(confidence, odd):
-    """Calcula value bet %"""
-    implied_prob = (1 / odd) * 100
-    value_bet = ((confidence - implied_prob) / implied_prob) * 100
-    return round(value_bet, 2)
+def _calculate_value_bet(odds_by_bookmaker, market, outcome):
+    """
+    Calcula value bet comparando odds entre casas
+    
+    Value Bet % = ((Melhor Odd - Média Odds) / Média Odds) × 100
+    
+    Exemplo:
+    - Bet365: 2.10
+    - Betano: 2.15
+    - Média: 2.125
+    - Value: ((2.15 - 2.125) / 2.125) × 100 = +1.18%
+    """
+    odds_list = [odds[market][outcome] for odds in odds_by_bookmaker.values()]
+    
+    best_odd = max(odds_list)
+    avg_odd = sum(odds_list) / len(odds_list)
+    value_percentage = ((best_odd - avg_odd) / avg_odd) * 100
+    
+    return round(value_percentage, 2)
 
 def _apply_strategy(predictions, strategy):
     """Filtra/ordena baseado na estratégia"""
+    
     if strategy == "BALANCED":
-        # Confiança >= 65% E value_bet >= 5%
+        # Favorito (odd 1.70-3.00) com value >= 3%
         filtered = [p for p in predictions 
-                   if p.confidence >= 65 and p.value_bet_percentage >= 5]
+                   if 1.70 <= p.odd <= 3.00 and p.value_bet_percentage >= 3]
         return sorted(filtered, key=lambda x: x.confidence, reverse=True)
     
     elif strategy == "CONSERVATIVE":
-        # Alta confiança (>= 75%)
-        filtered = [p for p in predictions if p.confidence >= 75]
+        # Favorito seguro (odd 1.50-2.00)
+        filtered = [p for p in predictions if 1.50 <= p.odd <= 2.00]
         return sorted(filtered, key=lambda x: x.confidence, reverse=True)
     
     elif strategy == "VALUE_BET":
-        # Value bet >= 10%
-        filtered = [p for p in predictions if p.value_bet_percentage >= 10]
+        # Value bet >= 5%
+        filtered = [p for p in predictions if p.value_bet_percentage >= 5]
         return sorted(filtered, key=lambda x: x.value_bet_percentage, reverse=True)
     
     elif strategy == "AGGRESSIVE":
-        # Odds altas (>= 2.5)
+        # Odds altas (>= 2.50)
         filtered = [p for p in predictions if p.odd >= 2.5]
         return sorted(filtered, key=lambda x: x.odd, reverse=True)
     

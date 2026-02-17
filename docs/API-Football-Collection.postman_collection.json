@@ -1,0 +1,1061 @@
+{
+	"info": {
+		"_postman_id": "betting-advisor-api-football",
+		"name": "API-Football - Betting Advisor",
+		"description": "Collection completa da API-Football para o projeto Betting Advisor.\n\n**Configuração:**\n1. Crie uma variável de ambiente `API_FOOTBALL_KEY` com sua chave da API\n2. Base URL: https://v3.football.api-sports.io\n\n**Documentação:** https://www.api-football.com/documentation-v3",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🏆 Leagues",
+			"item": [
+				{
+					"name": "Get All Leagues",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/leagues",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"leagues"
+							]
+						},
+						"description": "Retorna todas as ligas disponíveis."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Leagues by Country - Brazil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/leagues?country=Brazil",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"leagues"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "Brazil"
+								}
+							]
+						},
+						"description": "Retorna ligas do Brasil (Brasileirão, Copa do Brasil, etc)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Leagues by Country - England",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/leagues?country=England",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"leagues"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "England"
+								}
+							]
+						},
+						"description": "Retorna ligas da Inglaterra (Premier League, etc)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get League by ID - Brasileirão Série A",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/leagues?id=71",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"leagues"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "71",
+									"description": "ID do Brasileirão Série A"
+								}
+							]
+						},
+						"description": "Retorna detalhes do Brasileirão Série A (ID: 71)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get League by ID - Premier League",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/leagues?id=39",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"leagues"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "39",
+									"description": "ID da Premier League"
+								}
+							]
+						},
+						"description": "Retorna detalhes da Premier League (ID: 39)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar ligas/campeonatos disponíveis."
+		},
+		{
+			"name": "⚽ Fixtures (Jogos)",
+			"item": [
+				{
+					"name": "Get Fixtures by Date - Today",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?date=2026-02-17",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "date",
+									"value": "2026-02-17",
+									"description": "Formato: YYYY-MM-DD"
+								}
+							]
+						},
+						"description": "Retorna todos os jogos de hoje."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Fixtures by League - Brasileirão",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?league=71&season=2026",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "league",
+									"value": "71",
+									"description": "ID do Brasileirão Série A"
+								},
+								{
+									"key": "season",
+									"value": "2026"
+								}
+							]
+						},
+						"description": "Retorna jogos do Brasileirão Série A da temporada 2026."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Fixtures by League + Date",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?league=71&date=2026-02-17",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "league",
+									"value": "71",
+									"description": "ID do Brasileirão"
+								},
+								{
+									"key": "date",
+									"value": "2026-02-17",
+									"description": "Data específica"
+								}
+							]
+						},
+						"description": "Retorna jogos do Brasileirão em uma data específica."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Fixtures by League - Premier League",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?league=39&season=2026",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "league",
+									"value": "39",
+									"description": "ID da Premier League"
+								},
+								{
+									"key": "season",
+									"value": "2026"
+								}
+							]
+						},
+						"description": "Retorna jogos da Premier League da temporada 2026."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Fixture by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?id=1035148",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1035148",
+									"description": "ID do jogo específico"
+								}
+							]
+						},
+						"description": "Retorna detalhes de um jogo específico pelo ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Live Fixtures",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/fixtures?live=all",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"fixtures"
+							],
+							"query": [
+								{
+									"key": "live",
+									"value": "all",
+									"description": "Jogos ao vivo"
+								}
+							]
+						},
+						"description": "Retorna todos os jogos acontecendo ao vivo."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar jogos (fixtures) por data, liga, time, etc."
+		},
+		{
+			"name": "💰 Odds (Cotações)",
+			"item": [
+				{
+					"name": "Get Odds by Fixture ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds?fixture=1035148",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds"
+							],
+							"query": [
+								{
+									"key": "fixture",
+									"value": "1035148",
+									"description": "ID do jogo"
+								}
+							]
+						},
+						"description": "Retorna odds de um jogo específico de múltiplas casas de apostas."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Odds by League + Date",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds?league=71&date=2026-02-17",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds"
+							],
+							"query": [
+								{
+									"key": "league",
+									"value": "71",
+									"description": "ID do Brasileirão"
+								},
+								{
+									"key": "date",
+									"value": "2026-02-17"
+								}
+							]
+						},
+						"description": "Retorna odds de todos os jogos de uma liga em uma data."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Odds with Specific Bookmaker - Bet365",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds?fixture=1035148&bookmaker=6",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds"
+							],
+							"query": [
+								{
+									"key": "fixture",
+									"value": "1035148"
+								},
+								{
+									"key": "bookmaker",
+									"value": "6",
+									"description": "ID 6 = Bet365"
+								}
+							]
+						},
+						"description": "Retorna odds apenas da Bet365 (ID: 6) para um jogo."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Odds with Specific Bet Type - Match Winner",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds?fixture=1035148&bet=1",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds"
+							],
+							"query": [
+								{
+									"key": "fixture",
+									"value": "1035148"
+								},
+								{
+									"key": "bet",
+									"value": "1",
+									"description": "ID 1 = Match Winner (1X2)"
+								}
+							]
+						},
+						"description": "Retorna apenas odds de Match Winner (1X2)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar odds (cotações) de múltiplas casas de apostas."
+		},
+		{
+			"name": "🏠 Bookmakers",
+			"item": [
+				{
+					"name": "Get All Bookmakers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds/bookmakers",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds",
+								"bookmakers"
+							]
+						},
+						"description": "Retorna lista de todas as casas de apostas disponíveis."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Bookmaker by ID - Bet365",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds/bookmakers?id=6",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds",
+								"bookmakers"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "6",
+									"description": "ID da Bet365"
+								}
+							]
+						},
+						"description": "Retorna detalhes da Bet365 (ID: 6)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar casas de apostas (bookmakers) disponíveis."
+		},
+		{
+			"name": "⚙️ Bets (Tipos de Aposta)",
+			"item": [
+				{
+					"name": "Get All Bet Types",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds/bets",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds",
+								"bets"
+							]
+						},
+						"description": "Retorna todos os tipos de apostas disponíveis (Match Winner, Over/Under, BTTS, etc)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Bet Type by ID - Match Winner",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/odds/bets?id=1",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"odds",
+								"bets"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID 1 = Match Winner (1X2)"
+								}
+							]
+						},
+						"description": "Retorna detalhes do tipo de aposta Match Winner (1X2)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar tipos de apostas disponíveis."
+		},
+		{
+			"name": "🏅 Teams",
+			"item": [
+				{
+					"name": "Get Teams by Country - Brazil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/teams?country=Brazil",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"teams"
+							],
+							"query": [
+								{
+									"key": "country",
+									"value": "Brazil"
+								}
+							]
+						},
+						"description": "Retorna todos os times brasileiros cadastrados."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Teams by League - Brasileirão",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/teams?league=71&season=2026",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"teams"
+							],
+							"query": [
+								{
+									"key": "league",
+									"value": "71",
+									"description": "ID do Brasileirão"
+								},
+								{
+									"key": "season",
+									"value": "2026"
+								}
+							]
+						},
+						"description": "Retorna times participantes do Brasileirão Série A 2026."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Team by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/teams?id=127",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"teams"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "127",
+									"description": "ID 127 = Flamengo"
+								}
+							]
+						},
+						"description": "Retorna detalhes do Flamengo (ID: 127) incluindo logo."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Team by Name",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/teams?search=Flamengo",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"teams"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "Flamengo",
+									"description": "Nome do time"
+								}
+							]
+						},
+						"description": "Busca time pelo nome (mínimo 3 caracteres)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar times (incluindo logos)."
+		},
+		{
+			"name": "🌍 Countries",
+			"item": [
+				{
+					"name": "Get All Countries",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/countries",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"countries"
+							]
+						},
+						"description": "Retorna todos os países disponíveis."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para buscar países."
+		},
+		{
+			"name": "📊 Status",
+			"item": [
+				{
+					"name": "Get API Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-rapidapi-key",
+								"value": "{{API_FOOTBALL_KEY}}",
+								"type": "text"
+							},
+							{
+								"key": "x-rapidapi-host",
+								"value": "v3.football.api-sports.io",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://v3.football.api-sports.io/status",
+							"protocol": "https",
+							"host": [
+								"v3",
+								"football",
+								"api-sports",
+								"io"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Retorna status da sua conta (requests usados, limite diário, etc)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoint para verificar status da API e limites."
+		}
+	],
+	"variable": [
+		{
+			"key": "API_FOOTBALL_KEY",
+			"value": "9b0f0fe6a2e910ccf28f8968a422a7d9",
+			"type": "string"
+		}
+	]
+}
+
