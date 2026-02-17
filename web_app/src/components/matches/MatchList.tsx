@@ -26,7 +26,12 @@ interface MatchListProps {
 
 // Função auxiliar para formatar data
 const formatDateHeader = (dateStr: string): string => {
-  const matchDate = new Date(dateStr);
+  // dateStr vem no formato YYYY-MM-DD (já extraído no agrupamento)
+  const [year, month, day] = dateStr.split('-').map(Number);
+
+  // Cria data local (sem timezone issues)
+  const matchDate = new Date(year, month - 1, day);
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -84,9 +89,9 @@ export const MatchList: React.FC<MatchListProps> = ({
     const grouped: Record<string, Match[]> = {};
 
     matches.forEach(match => {
-      // Extrai apenas a data (YYYY-MM-DD) do timestamp ISO
-      const matchDate = new Date(match.date);
-      const dateKey = matchDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      // Extrai apenas a data (YYYY-MM-DD) diretamente da string, sem conversão de Date
+      // Isso evita problemas com timezone
+      const dateKey = match.date.split('T')[0]; // YYYY-MM-DD
 
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -205,7 +210,7 @@ export const MatchList: React.FC<MatchListProps> = ({
             <div key={date} className="matches-date-group">
               <div className="date-header" onClick={() => toggleDateExpand(date)}>
                 <span className="date-icon">📅</span>
-                <h3 className="date-title">{formatDateHeader(dateMatches[0].date)}</h3>
+                <h3 className="date-title">{formatDateHeader(date)}</h3>
                 <span className="date-count">{dateMatches.length} {dateMatches.length === 1 ? 'jogo' : 'jogos'}</span>
                 <span className="expand-toggle">
                   {expandedDates.has(date) ? '▼' : '►'}

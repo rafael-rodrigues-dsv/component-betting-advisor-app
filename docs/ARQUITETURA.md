@@ -390,8 +390,7 @@ component-betting-advisor-app/
 │   │   │   ├── .env                      # 🔑 API_FOOTBALL_KEY
 │   │   │   ├── .env.example              # Template do .env
 │   │   │   ├── __init__.py
-│   │   │   ├── settings.py               # Load .env
-│   │   │   └── constants.py              # TTLs, URLs
+│   │   │   └── settings.py               # Load .env
 │   │   │
 │   │   ├── web/                          # 🌐 WEB LAYER
 │   │   │   ├── __init__.py
@@ -457,6 +456,10 @@ component-betting-advisor-app/
 │   │   │   ├── services/                 # 🧠 Domain Services (Lógica de Negócio)
 │   │   │   │   ├── __init__.py
 │   │   │   │   └── odds_analyzer.py      # Lógica de estratégias
+│   │   │   │
+│   │   │   ├── constants/                # 📏 Domain Constants (Regras de Negócio)
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── constants.py          # Thresholds, ranges, estratégias
 │   │   │   │
 │   │   │   └── utils/                    # 🛠️ Domain Utils
 │   │   │       ├── __init__.py
@@ -1527,8 +1530,94 @@ CREATE TABLE ticket_bets (
 8️⃣ Mappers (API → Domain)
 9️⃣ APIFootballService
 🔟 OddsAnalyzer (estratégias)
-1️⃣1️⃣ Atualizar Controllers
-1️⃣2️⃣ Frontend (logo.type = EXT)
+1️⃣1️⃣ Pré-carregamento de Ligas (startup)
+1️⃣2️⃣ Atualizar Controllers
+1️⃣3️⃣ Frontend (logo.type = EXT)
+```
+
+### ⚡ Pré-carregamento de Ligas Principais
+
+**Executado automaticamente ao iniciar o backend (1x por dia):**
+
+**COM PRO PLAN (7.500 req/dia):**
+
+```python
+# web_api/src/main.py
+
+@app.on_event("startup")
+async def preload_main_leagues():
+    """
+    Pré-carrega fixtures das ligas principais ao iniciar.
+    
+    PRO PLAN (7.500 req/dia): Carrega HOJE até DOMINGO (semana completa).
+    
+    Executa apenas se não houver carga do dia atual no cache.
+    """
+    from application.services.preload_service import PreloadService
+    
+    preload_service = PreloadService()
+    
+    # Verifica se já tem carga de hoje
+    if await preload_service.has_todays_cache():
+        logger.info("✅ Cache do dia já existe. Pré-carregamento ignorado.")
+        return
+    
+    logger.info("🚀 Iniciando pré-carregamento de ligas principais...")
+    logger.info("📅 Período: Hoje até Domingo (até 7 dias)")
+    
+    # Pré-carrega 7 ligas × 7 dias
+    await preload_service.preload_fixtures([
+        # Brasil
+        71,   # Brasileirão Série A
+        73,   # Copa do Brasil
+        
+        # Europa - Top 5 Leagues
+        39,   # Premier League (Inglaterra)
+        140,  # La Liga (Espanha)
+        78,   # Bundesliga (Alemanha)
+        61,   # Ligue 1 (França)
+        135   # Serie A (Itália)
+    ])
+    
+    logger.info("✅ Pré-carregamento concluído! 7 ligas da semana prontas.")
+```
+
+**Benefícios:**
+- ✅ **Semana completa de 7 ligas** pré-carregada
+- ✅ **~224 requests usados** no startup (2,99% do limite PRO)
+- ✅ **Cache válido** até meia-noite de cada dia
+- ✅ **Não recarrega** se já tiver dados do dia
+- ✅ **Sobra 7.276 requests** para uso normal (97,01%)
+
+**Impacto em Requests (PRO PLAN - 7.500 req/dia):**
+```
+Pré-carregamento (startup):
+- 7 ligas × 7 dias = 49 req (fixtures)
+- ~25 jogos/dia × 7 dias = ~175 jogos
+- 175 jogos = ~175 req (odds)
+- TOTAL: ~224 req (2,99% do limite diário)
+
+Usuário acessa:
+- Fixtures: 0 req (cache hit)
+- Odds: 0 req (cache hit)
+- Total: 0 req ✅
+
+Cobertura:
+- 🇧🇷 Brasil: Brasileirão + Copa do Brasil
+- 🇪🇺 Europa: Premier, La Liga, Bundesliga, Ligue 1, Serie A
+- 📅 Período: Toda a semana (hoje até domingo)
+
+Economia vs Free Plan:
+- Free Plan: 100 req/dia (224 req = inviável)
+- PRO Plan: 7.500 req/dia (224 req = 2,99%)
+- Sobra PRO: 7.276 requests (97,01% disponíveis)
+```
+
+**Fórmula de Requests:**
+```
+Total = (ligas × dias_até_domingo) + (jogos_totais)
+Total = (7 × 7) + (~175) ≈ 224 requests
+Percentual = 224 / 7.500 = 2,99%
 ```
 
 ---

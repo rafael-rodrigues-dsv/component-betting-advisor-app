@@ -1,0 +1,27 @@
+{
+  "id": 39,
+  "name": "Premier League",
+  "country": "England",
+  "teams": [
+    {"id": 33, "name": "Manchester United"},
+    {"id": 40, "name": "Liverpool"},
+    {"id": 42, "name": "Arsenal"},
+    {"id": 47, "name": "Tottenham"},
+    {"id": 49, "name": "Chelsea"},
+    {"id": 50, "name": "Manchester City"},
+    {"id": 51, "name": "Brighton"},
+    {"id": 52, "name": "Crystal Palace"},
+    {"id": 66, "name": "Aston Villa"},
+    {"id": 48, "name": "West Ham"},
+    {"id": 39, "name": "Wolves"},
+    {"id": 34, "name": "Newcastle"}
+  ],
+  "match_days": {
+    "tuesday": 2,
+    "wednesday": 2,
+    "saturday": 6,
+    "sunday": 4
+  },
+  "typical_hours": [12, 14, 16, 17]
+}
+

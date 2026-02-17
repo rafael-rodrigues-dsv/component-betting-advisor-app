@@ -71,6 +71,7 @@ export interface Match {
   home_team: Team;
   away_team: Team;
   date: string;
+  timestamp: string;  // Data no formato YYYY-MM-DD
   status: string;
   round: RoundInfo;
   venue: Venue;

@@ -1013,10 +1013,19 @@ body {
 .ticket-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
 }
 
 .ticket-actions .btn {
-  flex: 1;
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.ticket-actions .btn-danger {
+  background: var(--danger);
+  color: white;
+  min-width: auto;
 }
 
 /* Tickets History */
@@ -1154,9 +1163,10 @@ body {
 
 .processing-label {
   color: var(--warning);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   animation: pulse 1.5s ease-in-out infinite;
+  flex: 1;
 }
 
 @keyframes pulse {
@@ -1370,22 +1380,22 @@ body {
 
 .dashboard-title {
   color: var(--text-primary);
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
   border-bottom: 2px solid var(--border-color);
 }
 
 .dashboard-section {
-  margin-bottom: 48px;
+  margin-bottom: 32px;
 }
 
 .section-title {
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1394,7 +1404,7 @@ body {
 /* Stats Grid - Layout consistente */
 .stats-grid {
   display: grid;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -1414,15 +1424,15 @@ body {
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 32px;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  min-height: 130px;
   position: relative;
   overflow: hidden;
 }
@@ -1433,7 +1443,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: linear-gradient(90deg, var(--accent-primary), #60a5fa);
   opacity: 0;
   transition: opacity 0.3s;
@@ -1450,29 +1460,29 @@ body {
 }
 
 .stat-icon {
-  font-size: 56px;
-  margin-bottom: 16px;
+  font-size: 40px;
+  margin-bottom: 12px;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .stat-value {
-  font-size: 48px;
+  font-size: 32px;
   font-weight: 700;
   color: var(--accent-primary);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   line-height: 1.1;
   word-break: break-word;
   max-width: 100%;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.3;
   text-align: center;
 }
 
@@ -1513,20 +1523,20 @@ body {
   }
 
   .stat-card {
-    min-height: 150px;
-    padding: 24px;
+    min-height: 110px;
+    padding: 16px;
   }
 
   .stat-icon {
-    font-size: 48px;
+    font-size: 32px;
   }
 
   .stat-value {
-    font-size: 36px;
+    font-size: 24px;
   }
 
   .stat-label {
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 

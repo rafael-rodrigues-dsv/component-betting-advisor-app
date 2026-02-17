@@ -476,20 +476,84 @@ GET /odds?fixture=123
 
 ## 📉 Estratégias para Economizar Requests
 
-### **1. Pré-carregar Ligas Principais**
+### **1. Pré-carregar Ligas Principais** ✅ IMPLEMENTADO
+
+**Executado automaticamente ao iniciar o backend (1x por dia):**
 
 ```python
-# Script executado 1x por dia (fora do horário de pico)
-# web_api/scripts/preload_fixtures.py
+# Script executado no startup do FastAPI
+# web_api/src/main.py
 
-leagues = [71, 73, 39]  # Brasileirão, Copa do Brasil, Premier
-for league in leagues:
-    fixtures = await provider.get_fixtures(league, today())
-    # Cache fica pronto para o dia
+@app.on_event("startup")
+async def preload_main_leagues():
+    """
+    Pré-carrega fixtures das ligas principais.
+    Executa apenas se não tiver carga do dia.
+    """
+    from application.services.preload_service import PreloadService
+    
+    preload = PreloadService()
+    
+    # Verifica se já tem carga de hoje
+    if await preload.has_todays_cache():
+        logger.info("✅ Cache do dia já existe")
+        return
+    
+    # Pré-carrega 3 ligas principais
+    leagues = [71, 73, 39]  # Brasileirão, Copa BR, Premier
+    
+    for league_id in leagues:
+        await preload.preload_league(league_id, date.today())
+    
+    logger.info("✅ Pré-carregamento concluído!")
 ```
 
-**Custo:** 3 requests/dia  
-**Benefício:** Primeira carga instantânea para usuários
+**Como Funciona:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🚀 PRÉ-CARREGAMENTO AUTOMÁTICO                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Backend inicia (uvicorn main:app)                                       │
+│     └─> FastAPI chama evento "startup"                                     │
+│                                                                             │
+│  2. PreloadService verifica cache                                           │
+│     └─> SELECT last_preload_date FROM cache_meta                           │
+│                                                                             │
+│  3. Se last_preload_date != hoje:                                           │
+│     ├─> GET /fixtures?league=71&date=2026-02-17  [1 request]              │
+│     ├─> GET /fixtures?league=73&date=2026-02-17  [1 request]              │
+│     ├─> GET /fixtures?league=39&date=2026-02-17  [1 request]              │
+│     └─> Salva no cache (TTL: até meia-noite)                               │
+│                                                                             │
+│  4. Se last_preload_date == hoje:                                           │
+│     └─> Pula pré-carregamento (já tem cache)  [0 requests]                │
+│                                                                             │
+│  5. Frontend acessa /api/v1/matches                                         │
+│     └─> Cache HIT! Retorna instantâneo  [0 requests]                      │
+│                                                                             │
+│  ✅ RESULTADO:                                                              │
+│  • Primeira carga do usuário: instantânea                                   │
+│  • 3 requests usados no startup (ao invés de 3 por usuário)               │
+│  • Cache válido o dia todo                                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Impacto em Requests:**
+
+| Cenário | Antes (sem pré-carga) | Depois (com pré-carga) | Economia |
+|---------|----------------------|------------------------|----------|
+| **Startup** | 0 req | 3 req (1x) | -3 req |
+| **Usuário 1 acessa** | 3 req (fixtures) | 0 req (cache) | +3 req |
+| **Usuário 2 acessa** | 3 req (fixtures) | 0 req (cache) | +3 req |
+| **Usuário 3 acessa** | 3 req (fixtures) | 0 req (cache) | +3 req |
+| **Total (3 usuários)** | **9 req** | **3 req** | **✅ 67% economia** |
+
+**Custo:** 3 requests/dia (fixo no startup)  
+**Benefício:** N usuários × 3 requests economizados  
+**Break-even:** A partir de 2 usuários/dia já compensa
 
 ---
 

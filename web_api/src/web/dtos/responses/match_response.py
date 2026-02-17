@@ -63,10 +63,11 @@ class MatchResponse(BaseModel):
     home_team: TeamResponse
     away_team: TeamResponse
     date: str
+    timestamp: str  # Data no formato YYYY-MM-DD
     status: str  # "NS" (Not Started), "LIVE", "FT" (Full Time)
     round: RoundInfoResponse
     venue: VenueResponse
-    odds: OddsResponse
+    odds: Dict[str, OddsResponse]  # Dicionário com bookmaker como chave
 
 
 class MatchesListResponse(BaseModel):
@@ -105,6 +106,7 @@ class MatchesListResponse(BaseModel):
                             "country": "Brazil"
                         },
                         "date": "2026-02-16T19:00:00Z",
+                        "timestamp": "2026-02-16",
                         "status": "NS",
                         "round": {
                             "type": "round",

@@ -12,6 +12,7 @@ import { PredictionProvider, usePrediction } from './contexts/PredictionContext'
 // Components
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
+import { PreloadStatus } from './components/common/PreloadStatus';
 
 // Pages
 import { DashboardPage, MatchesPage, PredictionsPage, TicketsPage } from './pages';
@@ -54,6 +55,9 @@ const AppContent: React.FC = () => {
 
       {/* Tickets */}
       {activeTab === 'tickets' && <TicketsPage />}
+
+      {/* Preload Status Notification */}
+      <PreloadStatus />
     </div>
   );
 };

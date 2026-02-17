@@ -13,12 +13,12 @@ export const DashboardPage: React.FC = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const { matches } = useMatches('all');
   const { predictions } = usePrediction();
-  const { tickets, loadTickets } = useTicket();
+  const { tickets, refreshTickets } = useTicket();
 
   useEffect(() => {
     loadDashboardStats();
-    loadTickets();
-  }, [loadTickets]);
+    refreshTickets();
+  }, [refreshTickets]);
 
   const loadDashboardStats = async () => {
     try {
@@ -86,7 +86,7 @@ export const DashboardPage: React.FC = () => {
             />
           </div>
 
-          <div className="stats-grid stats-grid-3" style={{ marginTop: 24 }}>
+          <div className="stats-grid stats-grid-3" style={{ marginTop: 16 }}>
             <StatsCard
               icon="📊"
               value={`${dashboardStats.success_rate}%`}

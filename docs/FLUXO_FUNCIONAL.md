@@ -26,11 +26,61 @@
 O sistema segue um fluxo linear e intuitivo com análise inteligente de odds:
 
 ```
-Dashboard → Jogos → Análise → Previsões → Bilhete → Acompanhamento
-    ↓         ↓        ↓          ↓          ↓           ↓
-Estatísticas Filtros Estratégia Mercados  Confirmar  Resultados
-                      (Odds)    (Value Bet)
+Pré-carga → Dashboard → Jogos → Análise → Previsões → Bilhete → Acompanhamento
+    ↓          ↓          ↓        ↓          ↓          ↓           ↓
+ Ligas     Estatísticas Filtros Estratégia Mercados  Confirmar  Resultados
+(1x/dia)                         (Odds)    (Value Bet)
 ```
+
+### ⚡ Pré-carregamento Automático (Background)
+
+**Executado automaticamente ao iniciar a aplicação (1x por dia):**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🚀 PRÉ-CARREGAMENTO DE LIGAS PRINCIPAIS                  │
+│                         COM PRO PLAN (7.500 req/dia)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  QUANDO: Ao iniciar backend (se não tiver carga do dia)                     │
+│                                                                             │
+│  O QUE: Busca fixtures + odds das 7 ligas principais                        │
+│  🇧🇷 Brasil:                                                                 │
+│  • Brasileirão Série A (ID: 71)                                             │
+│  • Copa do Brasil (ID: 73)                                                  │
+│                                                                             │
+│  🇪🇺 Europa - Top 5 Leagues:                                                 │
+│  • Premier League - Inglaterra (ID: 39)                                     │
+│  • La Liga - Espanha (ID: 140)                                              │
+│  • Bundesliga - Alemanha (ID: 78)                                           │
+│  • Ligue 1 - França (ID: 61)                                                │
+│  • Serie A - Itália (ID: 135)                                               │
+│                                                                             │
+│  PERÍODO: HOJE até DOMINGO da semana corrente (até 7 dias) 📅              │
+│                                                                             │
+│  COMO:                                                                      │
+│  1. Backend inicia                                                          │
+│  2. Verifica se já tem carga de hoje no cache                               │
+│  3. Se NÃO: busca na API-Football                                           │
+│     • 7 ligas × 7 dias = 49 requests (fixtures)                            │
+│     • ~25 jogos/dia × 7 dias = ~175 jogos                                  │
+│     • 175 jogos × 1 request = 175 requests (odds)                          │
+│     • TOTAL: ~224 requests (2,99% do limite PRO)                           │
+│  4. Salva no cache (TTL: até meia-noite de cada dia)                       │
+│  5. Frontend tem dados de 7 ligas × 7 dias instantâneos                    │
+│                                                                             │
+│  REQUESTS USADOS: ~224/7.500 (2,99% do limite diário)                      │
+│  ECONOMIA: Usuário vê 7 ligas da semana instantaneamente (0 requests)      │
+│                                                                             │
+│  ✅ Usuário não precisa esperar                                             │
+│  ✅ 7 CAMPEONATOS da SEMANA TODA prontos                                    │
+│  ✅ Cache válido até meia-noite de cada dia                                 │
+│  ✅ Sobra 7.276 requests para uso normal (97,01%)                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ### Abordagem do Sistema
 

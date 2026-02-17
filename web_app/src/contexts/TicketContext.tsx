@@ -17,6 +17,8 @@ interface TicketContextType {
   clearTicketBets: () => void;
   createTicket: (stake: number, bookmakerId: string) => Promise<Ticket | null>;
   loadTickets: () => Promise<void>;
+  refreshTickets: () => Promise<void>;
+  updateTicketsResults: () => Promise<void>;
   deleteTicket: (ticketId: string) => Promise<void>;
 }
 
@@ -86,13 +88,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (response.success && response.ticket) {
         setTickets(prev => [response.ticket!, ...prev]);
         clearTicketBets();
-        showNotification('🎉 Bilhete criado com sucesso!', 'success');
-
-        // Simula webhook de resultado após 5s
-        setTimeout(async () => {
-          await ticketsApi.simulateResult(response.ticket!.id);
-          await loadTickets(); // Recarrega para pegar resultado
-        }, 5000);
+        showNotification('🎉 Bilhete criado com sucesso! Clique em "Atualizar" para verificar resultados.', 'success');
 
         return response.ticket!;
       }
@@ -106,9 +102,74 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [ticketBets]);
 
+  const refreshTickets = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Apenas busca a lista de tickets (GET)
+      console.log('🔄 Buscando bilhetes...');
+      const response = await ticketsApi.getTickets();
+      const tickets = response.tickets || [];
+      const pendingCount = tickets.filter(t => t.status === 'PENDENTE').length;
+
+      console.log(`✅ Bilhetes carregados: ${tickets.length} total, ${pendingCount} pendentes`);
+
+      setTickets(tickets);
+    } catch (error) {
+      console.error('Erro ao carregar bilhetes:', error);
+      showNotification('❌ Erro ao carregar bilhetes', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateTicketsResults = useCallback(async () => {
+    try {
+      // Atualiza resultados dos bilhetes pendentes (backend processa)
+      console.log('⚙️ Processando resultados dos bilhetes pendentes...');
+      console.log('📡 Chamando: POST /api/v1/tickets/update-results');
+
+      const updateResponse = await ticketsApi.updateResults();
+
+      console.log('📥 Resposta recebida:', updateResponse);
+
+      if (updateResponse.success) {
+        if (updateResponse.stats.updated > 0) {
+          console.log(`✅ ${updateResponse.stats.updated} bilhetes atualizados!`);
+          showNotification(
+            `✅ ${updateResponse.stats.updated} bilhetes atualizados (${updateResponse.stats.won} ganhos, ${updateResponse.stats.lost} perdidos)`,
+            'success'
+          );
+        } else {
+          console.log('ℹ️ Nenhum bilhete atualizado (ainda pendentes)');
+        }
+
+        // Sempre busca a lista atualizada
+        await refreshTickets();
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar resultados:', error);
+      // Não mostra notificação de erro para não poluir (polling automático)
+    }
+  }, [refreshTickets]);
+
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
+      // Mantido para compatibilidade inicial - atualiza E busca
+      console.log('🔄 Atualizando resultados dos bilhetes pendentes...');
+      try {
+        const updateResponse = await ticketsApi.updateResults();
+        if (updateResponse.success && updateResponse.stats.updated > 0) {
+          showNotification(
+            `✅ ${updateResponse.stats.updated} bilhetes atualizados (${updateResponse.stats.won} ganhos, ${updateResponse.stats.lost} perdidos)`,
+            'success'
+          );
+        }
+      } catch (error) {
+        console.warn('⚠️ Erro ao atualizar resultados, continuando...', error);
+      }
+
+      // 2. Busca lista atualizada de tickets
       const response = await ticketsApi.getTickets();
       setTickets(response.tickets || []);
     } catch (error) {
@@ -146,6 +207,8 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         clearTicketBets,
         createTicket,
         loadTickets,
+        refreshTickets,
+        updateTicketsResults,
         deleteTicket,
       }}
     >

@@ -56,23 +56,41 @@ export const TicketHistory: React.FC<TicketHistoryProps> = ({ tickets, onDelete 
             </div>
             <div className="history-bets">
               {bets.map((bet, idx) => {
-                const isWon = bet.result === 'GANHOU';
-                const isLost = bet.result === 'PERDEU';
+                // Backend retorna WON/LOST em inglês
+                const isWon = bet.result === 'WON' || bet.result === 'GANHOU';
+                const isLost = bet.result === 'LOST' || bet.result === 'PERDEU';
+
                 const resultIcon = isWon ? '✅' : isLost ? '❌' : '⏳';
                 const resultClass = isWon ? 'bet-won' : isLost ? 'bet-lost' : 'bet-pending';
+                const resultText = isWon ? 'GANHOU' : isLost ? 'PERDEU' : 'PENDENTE';
 
                 return (
                   <div key={idx} className={`history-bet-item ${resultClass}`}>
-                    <span className="bet-result-icon">{resultIcon}</span>
-                    <div className="bet-info-container">
-                      <span className="bet-info">
-                        {bet.home_team} vs {bet.away_team} • {formatMarket(bet.market)}: {formatOutcome(bet.market, bet.predicted_outcome)} @ {(bet.odds ?? 0).toFixed(2)}
-                      </span>
-                      {bet.final_score && (
-                        <span className="bet-final-score">
-                          Placar: <strong>{bet.final_score}</strong>
-                        </span>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <span className="bet-result-icon" style={{ fontSize: 20 }}>{resultIcon}</span>
+                      <div className="bet-info-container" style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <span className="bet-info">
+                            {bet.home_team} vs {bet.away_team} • {formatMarket(bet.market)}: {formatOutcome(bet.market, bet.predicted_outcome)} @ {(bet.odds ?? 0).toFixed(2)}
+                          </span>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            backgroundColor: isWon ? 'rgba(16, 185, 129, 0.2)' : isLost ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                            color: isWon ? '#10b981' : isLost ? '#ef4444' : '#f59e0b',
+                            border: `1px solid ${isWon ? '#10b981' : isLost ? '#ef4444' : '#f59e0b'}`
+                          }}>
+                            {resultText}
+                          </span>
+                        </div>
+                        {bet.final_score && (
+                          <span className="bet-final-score">
+                            Placar: <strong>{bet.final_score}</strong>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

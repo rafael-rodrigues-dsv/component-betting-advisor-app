@@ -72,12 +72,12 @@ class CreateTicketRequest(BaseModel):
 
 class SimulateTicketRequest(BaseModel):
     """Request para simular resultado de um bilhete"""
-    ticket_id: str = Field(..., description="ID do bilhete para simular")
+    results: List[str] = Field(..., description="Lista de resultados para cada aposta ('WON', 'LOST')")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "ticket_id": "ticket-uuid"
+                "results": ["WON", "LOST", "WON"]
             }
         }
 

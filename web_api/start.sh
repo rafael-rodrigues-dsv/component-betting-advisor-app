@@ -24,6 +24,41 @@ fi
 echo "[INFO] Python encontrado: $PYTHON_CMD"
 $PYTHON_CMD --version
 
+# Verifica se a pasta data/ e os bancos existem
+NEED_RECREATE=0
+
+if [ ! -d "data" ]; then
+    echo "[WARN] Pasta data/ nao encontrada!"
+    NEED_RECREATE=1
+fi
+
+if [ -d "data" ]; then
+    if [ ! -f "data/cache.db" ]; then
+        echo "[WARN] Banco cache.db nao encontrado!"
+        NEED_RECREATE=1
+    fi
+
+    if [ ! -f "data/tickets.db" ]; then
+        echo "[WARN] Banco tickets.db nao encontrado!"
+        NEED_RECREATE=1
+    fi
+fi
+
+# Se precisar recriar, remove o venv antigo
+if [ $NEED_RECREATE -eq 1 ]; then
+    echo "[INFO] Estrutura de dados inconsistente. Recriando ambiente..."
+
+    if [ -d ".venv" ]; then
+        echo "[INFO] Removendo ambiente virtual antigo..."
+        rm -rf .venv
+    fi
+
+    if [ -d "data" ]; then
+        echo "[INFO] Limpando pasta data/..."
+        rm -rf data
+    fi
+fi
+
 # Verifica se o venv existe
 if [ ! -f ".venv/bin/activate" ]; then
     echo ""
@@ -49,4 +84,4 @@ echo "   Docs:   http://localhost:8000/docs"
 echo ""
 
 cd src
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload

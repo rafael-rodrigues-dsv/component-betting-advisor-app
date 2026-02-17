@@ -27,6 +27,41 @@ pause
 exit /b 1
 
 :create_venv
+REM Verifica se a pasta data/ existe
+set NEED_RECREATE=0
+if not exist "data\" (
+    echo [WARN] Pasta data/ nao encontrada!
+    set NEED_RECREATE=1
+)
+
+REM Verifica se os bancos de dados existem
+if not exist "data\cache.db" (
+    if exist "data\" (
+        echo [WARN] Banco cache.db nao encontrado!
+        set NEED_RECREATE=1
+    )
+)
+
+if not exist "data\tickets.db" (
+    if exist "data\" (
+        echo [WARN] Banco tickets.db nao encontrado!
+        set NEED_RECREATE=1
+    )
+)
+
+REM Se precisar recriar, remove o venv antigo
+if !NEED_RECREATE!==1 (
+    echo [INFO] Estrutura de dados inconsistente. Recriando ambiente...
+    if exist ".venv\" (
+        echo [INFO] Removendo ambiente virtual antigo...
+        rmdir /s /q .venv
+    )
+    if exist "data\" (
+        echo [INFO] Limpando pasta data/...
+        rmdir /s /q data
+    )
+)
+
 REM Verifica se o venv existe
 if not exist ".venv\Scripts\activate.bat" (
     echo.
@@ -62,4 +97,4 @@ echo    Docs:   http://localhost:8000/docs
 echo.
 
 cd src
-python main.py
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload

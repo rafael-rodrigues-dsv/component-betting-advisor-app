@@ -2,23 +2,27 @@
  * API Endpoints
  */
 import { apiGet, apiPost, apiDelete } from './apiClient';
-import type { Match, League, Bookmaker, Prediction, Ticket, TicketBet, Strategy } from '../types';
+import type { Match, League, Bookmaker, Prediction, Ticket, TicketBet, Strategy } from '../../types';
 
 // ============================================
 // MATCHES
 // ============================================
 interface MatchesResponse {
   success: boolean;
+  date: string;  // Data no formato YYYY-MM-DD
+  count: number;
   matches: Match[];
 }
 
 interface LeaguesResponse {
   success: boolean;
+  count: number;
   leagues: League[];
 }
 
 interface BookmakersResponse {
   success: boolean;
+  count: number;
   bookmakers: Bookmaker[];
 }
 
@@ -43,6 +47,8 @@ interface PreTicket {
 
 interface AnalyzeResponse {
   success: boolean;
+  count: number;
+  strategy: string;
   predictions: Prediction[];
   pre_ticket?: PreTicket;
 }
@@ -57,11 +63,13 @@ export const predictionsApi = {
 // ============================================
 interface TicketsResponse {
   success: boolean;
+  count: number;
   tickets: Ticket[];
 }
 
 interface CreateTicketResponse {
   success: boolean;
+  message: string;
   ticket: Ticket;
 }
 
@@ -85,6 +93,17 @@ interface DashboardStatsResponse {
   };
 }
 
+interface UpdateResultsResponse {
+  success: boolean;
+  message: string;
+  stats: {
+    total_pending: number;
+    updated: number;
+    won: number;
+    lost: number;
+  };
+}
+
 export const ticketsApi = {
   getTickets: () => apiGet<TicketsResponse>('/tickets'),
 
@@ -102,6 +121,10 @@ export const ticketsApi = {
 
   deleteTicket: (ticketId: string) =>
     apiDelete<{ success: boolean }>(`/tickets/${ticketId}`),
+
+  // Atualiza resultados de todos os bilhetes pendentes
+  updateResults: () =>
+    apiPost<UpdateResultsResponse>('/tickets/update-results', {}),
 };
 
 

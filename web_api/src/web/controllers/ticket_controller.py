@@ -1,12 +1,9 @@
 """
-Ticket Controller - Gerenciamento de bilhetes (MOCK)
+Ticket Controller - Gerenciamento de bilhetes
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from typing import Dict, Optional
-from datetime import datetime
-import random
-import uuid
+from fastapi import APIRouter, HTTPException
+import logging
 
 from web.dtos.requests.ticket_request import CreateTicketRequest, SimulateTicketRequest
 from web.dtos.responses.ticket_response import (
@@ -19,222 +16,317 @@ from web.dtos.responses.ticket_response import (
     TicketBetResponse,
     TicketStatusEnum
 )
+from application.services.ticket_application_service import TicketApplicationService
+from application.services.ticket_updater_service import TicketUpdaterService
+from domain.enums.ticket_status_enum import TicketStatus
+from web.mappers.ticket_mapper import map_ticket_domain_to_response
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-# Mock DB
-TICKETS_DB: Dict[str, TicketResponse] = {}
-
-
-def simulate_ticket_result(ticket_id: str):
-    """Webhook mocado - simula resultado após 5 segundos"""
-    import time
-    time.sleep(5)
-
-    ticket = TICKETS_DB.get(ticket_id)
-    if not ticket or ticket.status != TicketStatusEnum.PENDING:
-        return
-
-    print(f"[WEBHOOK] Processando resultado do bilhete: {ticket_id}")
-
-    # Simula cada aposta individualmente baseado na confiança
-    all_won = True
-
-    for bet in ticket.bets:
-        bet_won = random.random() < (bet.confidence * 0.85)
-        bet.result = "GANHOU" if bet_won else "PERDEU"
-
-        # Gera placar final do jogo
-        home_goals = random.randint(0, 4)
-        away_goals = random.randint(0, 4)
-        bet.final_score = f"{home_goals} x {away_goals}"
-
-        if not bet_won:
-            all_won = False
-
-    # Bilhete só ganha se TODAS as apostas ganharem
-    ticket.status = TicketStatusEnum.WON if all_won else TicketStatusEnum.LOST
-    ticket.profit = round(ticket.potential_return - ticket.stake, 2) if all_won else -ticket.stake
-
-    TICKETS_DB[ticket_id] = ticket
-
-    result_text = "GANHOU! 🎉" if all_won else "PERDEU 😔"
-    print(f"[WEBHOOK] Bilhete {ticket_id}: {result_text}")
+# Instâncias dos serviços
+ticket_service = TicketApplicationService()
+updater_service = TicketUpdaterService()
 
 
 @router.post("/tickets")
-async def create_ticket(request: CreateTicketRequest, background_tasks: BackgroundTasks):
-    """Cria bilhete"""
-    print(f"[DEBUG] Recebido request para criar bilhete: {request.name}")
-    print(f"[DEBUG] Apostas: {len(request.bets)}, Stake: {request.stake}")
+async def create_ticket(request: CreateTicketRequest) -> CreateTicketResponse:
+    """
+    Cria um novo bilhete de apostas.
 
-    if not request.bets:
-        raise HTTPException(400, "Bilhete precisa ter apostas")
-    if request.stake <= 0:
-        raise HTTPException(400, "Stake deve ser maior que zero")
+    Salva no banco de dados SQLite.
+    """
+    try:
+        # Validações
+        if not request.bets:
+            raise HTTPException(status_code=400, detail="Bilhete precisa ter apostas")
+        if request.stake <= 0:
+            raise HTTPException(status_code=400, detail="Stake deve ser maior que zero")
 
-    combined_odds = 1.0
-    for bet in request.bets:
-        combined_odds *= bet.odds
+        # Converte bets do request para formato do service
+        bets_data = [
+            {
+                'match_id': bet.match_id,
+                'home_team': bet.home_team,
+                'away_team': bet.away_team,
+                'league': bet.league,
+                'market': bet.market,
+                'predicted_outcome': bet.predicted_outcome,
+                'odds': bet.odds,
+                'confidence': bet.confidence
+            }
+            for bet in request.bets
+        ]
 
-    ticket_id = str(uuid.uuid4())
-
-    bets_response = [
-        TicketBetResponse(
-            match_id=bet.match_id,
-            home_team=bet.home_team,
-            away_team=bet.away_team,
-            league=bet.league,
-            market=bet.market,
-            predicted_outcome=bet.predicted_outcome,
-            odds=bet.odds,
-            confidence=bet.confidence,
-            result=None,
-            final_score=None
+        # Cria ticket usando service
+        ticket = ticket_service.create_ticket(
+            name=request.name,
+            bets_data=bets_data,
+            stake=request.stake,
+            bookmaker_id=request.bookmaker_id
         )
-        for bet in request.bets
-    ]
 
-    ticket = TicketResponse(
-        id=ticket_id,
-        name=request.name,
-        stake=request.stake,
-        combined_odds=round(combined_odds, 2),
-        potential_return=round(request.stake * combined_odds, 2),
-        bookmaker_id=request.bookmaker_id,
-        status=TicketStatusEnum.PENDING,
-        bets=bets_response,
-        created_at=datetime.now().isoformat()
-    )
+        # Converte para response usando mapper
+        ticket_response = map_ticket_domain_to_response(ticket)
 
-    TICKETS_DB[ticket_id] = ticket
+        logger.info(f"✅ Ticket criado: {ticket.id}")
 
-    # Agenda webhook mocado para simular resultado em 5 segundos
-    background_tasks.add_task(simulate_ticket_result, ticket_id)
+        return {
+            "success": True,
+            "message": "Bilhete criado com sucesso!",
+            "ticket": ticket_response.model_dump()
+        }
 
-    print(f"[DEBUG] Bilhete criado: {ticket_id} - Resultado será processado em 5s")
-
-    return {
-        "success": True,
-        "message": "Bilhete criado com sucesso! Resultado em 5 segundos...",
-        "ticket": ticket.model_dump()
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao criar ticket: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tickets")
-async def get_tickets(status: Optional[str] = None, limit: int = 20):
-    """Lista bilhetes"""
-    tickets = list(TICKETS_DB.values())
+async def list_tickets(limit: int = 10, offset: int = 0) -> TicketsListResponse:
+    """Lista bilhetes (paginado)"""
+    try:
+        tickets = ticket_service.list_tickets(limit=limit, offset=offset)
 
-    if status:
-        tickets = [t for t in tickets if t.status == status]
+        # Converte para response usando mapper
+        tickets_response = [map_ticket_domain_to_response(ticket) for ticket in tickets]
 
-    tickets = sorted(tickets, key=lambda x: x.created_at, reverse=True)[:limit]
+        return {
+            "success": True,
+            "count": len(tickets_response),
+            "tickets": tickets_response
+        }
 
-    return {
-        "success": True,
-        "count": len(tickets),
-        "stats": {
-            "total_stake": round(sum(t.stake for t in tickets), 2),
-            "total_potential": round(sum(t.potential_return for t in tickets), 2),
-            "pending": len([t for t in tickets if t.status == TicketStatusEnum.PENDING]),
-            "won": len([t for t in tickets if t.status == TicketStatusEnum.WON]),
-            "lost": len([t for t in tickets if t.status == TicketStatusEnum.LOST]),
-        },
-        "tickets": [t.model_dump() for t in tickets]
-    }
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar tickets: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tickets/{ticket_id}")
-async def get_ticket(ticket_id: str):
-    """Detalhes do bilhete"""
-    ticket = TICKETS_DB.get(ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Bilhete não encontrado")
-    return {"success": True, "ticket": ticket.model_dump()}
+async def get_ticket(ticket_id: str) -> TicketDetailResponse:
+    """Busca detalhes de um bilhete"""
+    try:
+        ticket = ticket_service.get_ticket(ticket_id)
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Bilhete não encontrado")
+
+        # Converte para response usando mapper
+        ticket_response = map_ticket_domain_to_response(ticket)
+
+        return {
+            "success": True,
+            "ticket": ticket_response
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar ticket: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tickets/{ticket_id}/simulate")
+async def simulate_ticket(ticket_id: str, request: SimulateTicketRequest) -> SimulateTicketResponse:
+    """Simula resultado de um bilhete manualmente (para testes)"""
+    try:
+        ticket = ticket_service.simulate_ticket_result(ticket_id, request.results)
+
+        # Mapeia o status para mensagem amigável
+        status_messages = {
+            TicketStatus.WON: "GANHOU! 🎉",
+            TicketStatus.LOST: "PERDEU 😢",
+            TicketStatus.PENDING: "PENDENTE ⏳"
+        }
+        message = f"Resultado simulado: {status_messages.get(ticket.status, ticket.status.value)}"
+
+        # Converte para response usando mapper
+        ticket_response = map_ticket_domain_to_response(ticket)
+
+        return {
+            "success": True,
+            "message": message,
+            "ticket": ticket_response
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ Erro ao simular ticket: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tickets/{ticket_id}/simulate-auto")
+async def simulate_ticket_auto(ticket_id: str) -> SimulateTicketResponse:
+    """
+    Simula resultado de um bilhete automaticamente usando mock da API Football.
+
+    Consulta os resultados mockados das partidas e determina automaticamente
+    se cada aposta ganhou ou perdeu.
+    """
+    try:
+        ticket = ticket_service.simulate_ticket_with_api_mock(ticket_id)
+
+        # Mapeia o status para mensagem amigável
+        status_messages = {
+            TicketStatus.WON: "GANHOU! 🎉",
+            TicketStatus.LOST: "PERDEU 😢",
+            TicketStatus.PENDING: "PENDENTE ⏳"
+        }
+        message = f"Resultado simulado via API: {status_messages.get(ticket.status, ticket.status.value)}"
+
+        # Converte para response usando mapper
+        ticket_response = map_ticket_domain_to_response(ticket)
+
+        return {
+            "success": True,
+            "message": message,
+            "ticket": ticket_response
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ Erro ao simular ticket automaticamente: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/tickets/{ticket_id}")
+async def delete_ticket(ticket_id: str) -> DeleteTicketResponse:
+    """Deleta um bilhete"""
+    try:
+        deleted = ticket_service.delete_ticket(ticket_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Bilhete não encontrado")
+
+        return {
+            "success": True,
+            "message": "Bilhete deletado com sucesso"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao deletar ticket: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/tickets/stats/dashboard")
 async def get_dashboard_stats():
-    """Retorna estatísticas para o dashboard"""
-    all_tickets = list(TICKETS_DB.values())
+    """Retorna estatísticas do dashboard"""
+    try:
+        stats = ticket_service.get_stats()
 
-    total_tickets = len(all_tickets)
-    won_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.WON])
-    lost_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.LOST])
-    pending_tickets = len([t for t in all_tickets if t.status == TicketStatusEnum.PENDING])
+        total_tickets = stats.get("total_tickets", 0)
+        won_tickets = stats.get("by_status", {}).get("WON", 0)
+        lost_tickets = stats.get("by_status", {}).get("LOST", 0)
+        pending_tickets = stats.get("by_status", {}).get("PENDING", 0)
+        total_staked = stats.get("total_invested", 0.0)
 
-    # Taxa de sucesso (apenas bilhetes finalizados)
-    finalized_tickets = won_tickets + lost_tickets
-    success_rate = round((won_tickets / finalized_tickets * 100), 1) if finalized_tickets > 0 else 0
+        # Calcula success_rate (taxa de sucesso)
+        success_rate = (won_tickets / total_tickets * 100) if total_tickets > 0 else 0.0
 
-    # Total apostado e ganho
-    total_staked = round(sum(t.stake for t in all_tickets), 2)
-    total_profit = round(sum(t.profit for t in all_tickets if t.profit is not None), 2)
+        # Calcula total_profit (lucro total)
+        # TODO: Implementar cálculo real quando tivermos os valores de retorno
+        total_profit = 0.0
 
-    return {
-        "success": True,
-        "stats": {
-            "total_tickets": total_tickets,
-            "won_tickets": won_tickets,
-            "lost_tickets": lost_tickets,
-            "pending_tickets": pending_tickets,
-            "success_rate": success_rate,
-            "total_staked": total_staked,
-            "total_profit": total_profit
+        return {
+            "success": True,
+            "stats": {
+                "total_tickets": total_tickets,
+                "won_tickets": won_tickets,         # Frontend espera won_tickets
+                "lost_tickets": lost_tickets,       # Frontend espera lost_tickets
+                "pending_tickets": pending_tickets, # Frontend espera pending_tickets
+                "success_rate": success_rate,       # Frontend espera success_rate
+                "total_staked": total_staked,       # Frontend espera total_staked
+                "total_profit": total_profit        # Frontend espera total_profit
+            }
         }
-    }
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/tickets/{ticket_id}")
-async def delete_ticket(ticket_id: str):
-    """Remove bilhete"""
-    if ticket_id not in TICKETS_DB:
-        raise HTTPException(404, "Bilhete não encontrado")
-    del TICKETS_DB[ticket_id]
-    return {"success": True, "message": "Bilhete removido"}
+@router.post("/tickets/update-results")
+async def update_tickets_results():
+    """
+    Atualiza resultados de todos os bilhetes pendentes.
+
+    Consulta a API de futebol para obter resultados das partidas
+    e atualiza status dos bilhetes automaticamente.
+    """
+    try:
+        logger.info("🔄 Iniciando atualização de bilhetes pendentes...")
+
+        stats = await updater_service.update_pending_tickets()
+
+        return {
+            "success": True,
+            "message": f"Atualização concluída: {stats['updated']} bilhetes atualizados",
+            "stats": stats
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar bilhetes: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/tickets/{ticket_id}/simulate")
-async def simulate_result(ticket_id: str):
-    """Simula resultado (para testes)"""
-    ticket = TICKETS_DB.get(ticket_id)
-    if not ticket:
-        raise HTTPException(404, "Bilhete não encontrado")
-    if ticket.status != TicketStatusEnum.PENDING:
-        raise HTTPException(400, "Bilhete já finalizado")
+@router.post("/tickets/{ticket_id}/update-result")
+async def update_ticket_result(ticket_id: str):
+    """
+    Atualiza resultado de um bilhete específico.
 
-    # Simula cada aposta individualmente baseado na confiança
-    all_won = True
-    lost_bets = []
+    Args:
+        ticket_id: ID do bilhete
+    """
+    try:
+        logger.info(f"🔄 Atualizando bilhete {ticket_id}...")
 
-    for bet in ticket.bets:
-        # Cada aposta tem chance de ganhar baseada na sua confiança
-        bet_won = random.random() < (bet.confidence * 0.85)
-        bet.result = "GANHOU" if bet_won else "PERDEU"
+        updated = await updater_service.update_ticket(ticket_id)
 
-        # Gera placar final do jogo
-        home_goals = random.randint(0, 4)
-        away_goals = random.randint(0, 4)
-        bet.final_score = f"{home_goals} x {away_goals}"
+        if not updated:
+            raise HTTPException(status_code=404, detail="Bilhete não encontrado ou não está pendente")
 
-        if not bet_won:
-            all_won = False
-            lost_bets.append(f"{bet.home_team} vs {bet.away_team}")
+        # Busca o bilhete atualizado
+        ticket = ticket_service.get_ticket(ticket_id)
+        ticket_response = map_ticket_domain_to_response(ticket)
 
-    # Bilhete só ganha se TODAS as apostas ganharem
-    ticket.status = TicketStatusEnum.WON if all_won else TicketStatusEnum.LOST
-    ticket.profit = round(ticket.potential_return - ticket.stake, 2) if all_won else -ticket.stake
+        return {
+            "success": True,
+            "message": "Bilhete atualizado com sucesso",
+            "ticket": ticket_response.model_dump()
+        }
 
-    TICKETS_DB[ticket_id] = ticket
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar bilhete: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    if all_won:
-        message = "GANHOU! 🎉 Todas as apostas deram green!"
-    else:
-        message = f"Perdeu 😔 - Não deu green: {', '.join(lost_bets)}"
 
-    return {
-        "success": True,
-        "message": message,
-        "ticket": ticket.model_dump()
-    }
+@router.post("/tickets/clear-cache")
+async def clear_results_cache():
+    """
+    Limpa o cache de resultados mockados (apenas para testes).
+
+    Útil para resetar o sistema de simulação temporal.
+    """
+    try:
+        from infrastructure.external.api_football.results_mock import FixtureResultsMock
+
+        FixtureResultsMock.clear_cache()
+        logger.info("🗑️ Cache de resultados limpo")
+
+        return {
+            "success": True,
+            "message": "Cache de resultados limpo com sucesso"
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao limpar cache: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+

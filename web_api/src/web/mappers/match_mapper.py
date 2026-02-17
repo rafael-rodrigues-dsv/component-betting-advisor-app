@@ -1,0 +1,122 @@
+"""
+Match Mapper - Converte dados de serviço para DTOs de response
+"""
+from typing import Dict, Any, List
+from web.dtos.responses.match_response import (
+    MatchResponse,
+    TeamResponse,
+    LeagueResponse,
+    VenueResponse,
+    RoundInfoResponse,
+    OddsResponse
+)
+from web.dtos.responses.logo_dto import LogoDTO
+
+
+class MatchMapper:
+    """Mapper para converter dados de match do service para DTOs"""
+
+    @staticmethod
+    def to_match_response(match_data: Dict[str, Any]) -> MatchResponse:
+        """
+        Converte dados de match do service para MatchResponse DTO.
+
+        Args:
+            match_data: Dicionário com dados do match do service
+
+        Returns:
+            MatchResponse tipado
+        """
+        # Mapeia league
+        league_data = match_data.get("league", {})
+        league = LeagueResponse(
+            id=str(league_data.get("id", "")),
+            name=league_data.get("name", ""),
+            country=league_data.get("country", ""),
+            logo=league_data.get("logo", ""),
+            type=league_data.get("type", "league")
+        )
+
+        # Mapeia home_team
+        home_team_data = match_data.get("home_team", {})
+        home_team_logo_data = home_team_data.get("logo", {})
+        home_team = TeamResponse(
+            id=str(home_team_data.get("id", "")),
+            name=home_team_data.get("name", ""),
+            logo=LogoDTO(
+                url=home_team_logo_data.get("url", ""),
+                type=home_team_logo_data.get("type", "LOCAL")
+            ),
+            country=home_team_data.get("country", "Brazil")
+        )
+
+        # Mapeia away_team
+        away_team_data = match_data.get("away_team", {})
+        away_team_logo_data = away_team_data.get("logo", {})
+        away_team = TeamResponse(
+            id=str(away_team_data.get("id", "")),
+            name=away_team_data.get("name", ""),
+            logo=LogoDTO(
+                url=away_team_logo_data.get("url", ""),
+                type=away_team_logo_data.get("type", "LOCAL")
+            ),
+            country=away_team_data.get("country", "Brazil")
+        )
+
+        # Mapeia round
+        round_data = match_data.get("round", {})
+        round_info = RoundInfoResponse(
+            type=round_data.get("type", "round"),
+            number=round_data.get("number"),
+            name=round_data.get("name", "")
+        )
+
+        # Mapeia venue
+        venue_data = match_data.get("venue", {})
+        venue = VenueResponse(
+            name=venue_data.get("name", ""),
+            city=venue_data.get("city", "")
+        )
+
+        # Mapeia odds (dicionário de bookmakers)
+        odds_data = match_data.get("odds", {})
+        odds_mapped: Dict[str, OddsResponse] = {}
+
+        for bookmaker, bookmaker_odds in odds_data.items():
+            if isinstance(bookmaker_odds, dict):
+                odds_mapped[bookmaker] = OddsResponse(
+                    home=bookmaker_odds.get("home", 0.0),
+                    draw=bookmaker_odds.get("draw", 0.0),
+                    away=bookmaker_odds.get("away", 0.0),
+                    over_25=bookmaker_odds.get("over_25", 0.0),
+                    under_25=bookmaker_odds.get("under_25", 0.0),
+                    btts_yes=bookmaker_odds.get("btts_yes", 0.0),
+                    btts_no=bookmaker_odds.get("btts_no", 0.0)
+                )
+
+        return MatchResponse(
+            id=str(match_data.get("id", "")),
+            league=league,
+            home_team=home_team,
+            away_team=away_team,
+            date=match_data.get("date", ""),
+            timestamp=match_data.get("timestamp", ""),
+            status=match_data.get("status", "Not Started"),
+            round=round_info,
+            venue=venue,
+            odds=odds_mapped
+        )
+
+    @staticmethod
+    def to_matches_list(matches_data: List[Dict[str, Any]]) -> List[MatchResponse]:
+        """
+        Converte lista de matches do service para lista de MatchResponse DTOs.
+
+        Args:
+            matches_data: Lista de dicionários com dados de matches
+
+        Returns:
+            Lista de MatchResponse tipados
+        """
+        return [MatchMapper.to_match_response(match) for match in matches_data]
+
