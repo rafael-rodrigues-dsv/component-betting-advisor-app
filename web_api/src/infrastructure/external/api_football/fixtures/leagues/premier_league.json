@@ -14,14 +14,25 @@
     {"id": 66, "name": "Aston Villa"},
     {"id": 48, "name": "West Ham"},
     {"id": 39, "name": "Wolves"},
-    {"id": 34, "name": "Newcastle"}
+    {"id": 34, "name": "Newcastle"},
+    {"id": 35, "name": "Bournemouth"},
+    {"id": 36, "name": "Fulham"},
+    {"id": 37, "name": "Brentford"},
+    {"id": 38, "name": "Everton"},
+    {"id": 41, "name": "Southampton"},
+    {"id": 46, "name": "Leicester"},
+    {"id": 53, "name": "Nottingham Forest"},
+    {"id": 54, "name": "Leeds United"}
   ],
   "match_days": {
-    "tuesday": 2,
-    "wednesday": 2,
+    "monday": 1,
+    "tuesday": 0,
+    "wednesday": 0,
+    "thursday": 0,
+    "friday": 0,
     "saturday": 6,
-    "sunday": 4
+    "sunday": 3
   },
-  "typical_hours": [12, 14, 16, 17]
+  "typical_hours": [12, 14, 16, 17, 19]
 }
 

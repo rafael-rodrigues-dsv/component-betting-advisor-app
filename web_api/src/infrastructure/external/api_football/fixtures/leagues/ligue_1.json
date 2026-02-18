@@ -1,0 +1,36 @@
+{
+  "id": 61,
+  "name": "Ligue 1",
+  "country": "France",
+  "teams": [
+    {"id": 79, "name": "Lille"},
+    {"id": 80, "name": "Lyon"},
+    {"id": 81, "name": "Marseille"},
+    {"id": 82, "name": "Monaco"},
+    {"id": 83, "name": "Montpellier"},
+    {"id": 84, "name": "Nantes"},
+    {"id": 85, "name": "Nice"},
+    {"id": 86, "name": "Paris Saint Germain"},
+    {"id": 87, "name": "Reims"},
+    {"id": 88, "name": "Rennes"},
+    {"id": 89, "name": "Strasbourg"},
+    {"id": 90, "name": "Toulouse"},
+    {"id": 91, "name": "Lens"},
+    {"id": 92, "name": "Brest"},
+    {"id": 93, "name": "Lorient"},
+    {"id": 94, "name": "Clermont Foot"},
+    {"id": 95, "name": "Ajaccio"},
+    {"id": 96, "name": "Auxerre"}
+  ],
+  "match_days": {
+    "monday": 0,
+    "tuesday": 0,
+    "wednesday": 0,
+    "thursday": 0,
+    "friday": 1,
+    "saturday": 5,
+    "sunday": 3
+  },
+  "typical_hours": [15, 17, 19, 21]
+}
+

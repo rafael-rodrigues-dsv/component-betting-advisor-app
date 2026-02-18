@@ -38,7 +38,7 @@ LEAGUE_COUNTRIES = {
 # Mapeamento ID → Arquivo de fixtures
 LEAGUE_FIXTURE_FILES = {
     LEAGUE_BRASILEIRAO: "brasileirao.json",
-    LEAGUE_COPA_BRASIL: "brasileirao.json",  # Usa mesmos times
+    LEAGUE_COPA_BRASIL: "copa_brasil.json",
     LEAGUE_PREMIER_LEAGUE: "premier_league.json",
     LEAGUE_LA_LIGA: "la_liga.json",
     LEAGUE_BUNDESLIGA: "bundesliga.json",

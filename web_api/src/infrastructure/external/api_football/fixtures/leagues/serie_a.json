@@ -1,0 +1,38 @@
+{
+  "id": 135,
+  "name": "Serie A",
+  "country": "Italy",
+  "teams": [
+    {"id": 487, "name": "Lazio"},
+    {"id": 488, "name": "Atalanta"},
+    {"id": 489, "name": "Cagliari"},
+    {"id": 490, "name": "Empoli"},
+    {"id": 492, "name": "Napoli"},
+    {"id": 496, "name": "Juventus"},
+    {"id": 497, "name": "Roma"},
+    {"id": 498, "name": "Sassuolo"},
+    {"id": 499, "name": "Atalanta"},
+    {"id": 500, "name": "Bologna"},
+    {"id": 502, "name": "Fiorentina"},
+    {"id": 503, "name": "Torino"},
+    {"id": 504, "name": "Verona"},
+    {"id": 505, "name": "Inter"},
+    {"id": 506, "name": "AC Milan"},
+    {"id": 508, "name": "Genoa"},
+    {"id": 511, "name": "Sampdoria"},
+    {"id": 512, "name": "Spezia"},
+    {"id": 514, "name": "Udinese"},
+    {"id": 515, "name": "Venezia"}
+  ],
+  "match_days": {
+    "monday": 1,
+    "tuesday": 0,
+    "wednesday": 0,
+    "thursday": 0,
+    "friday": 1,
+    "saturday": 5,
+    "sunday": 3
+  },
+  "typical_hours": [12, 15, 18, 20]
+}
+

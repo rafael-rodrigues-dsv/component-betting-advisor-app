@@ -27,8 +27,17 @@ interface BookmakersResponse {
 }
 
 export const matchesApi = {
-  getMatches: (leagueId?: string) =>
-    apiGet<MatchesResponse>('/matches', leagueId && leagueId !== 'all' ? { league_id: leagueId } : undefined),
+  getMatches: (leagueId?: string, date?: string) => {
+    const params: any = {};
+    if (leagueId && leagueId !== 'all') {
+      params.league_id = leagueId;
+    }
+    if (date) {
+      params.date = date;
+    }
+    // Se não passar date, backend retorna semana toda automaticamente
+    return apiGet<MatchesResponse>('/matches', Object.keys(params).length > 0 ? params : undefined);
+  },
 
   getLeagues: () => apiGet<LeaguesResponse>('/leagues'),
 

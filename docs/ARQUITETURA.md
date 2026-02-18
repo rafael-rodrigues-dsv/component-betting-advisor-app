@@ -530,7 +530,7 @@ component-betting-advisor-app/
     │   └── vite.svg
     │
     └── src/
-        ├── main.tsx
+        ├── Main.tsx
         ├── App.tsx
         │
         ├── components/

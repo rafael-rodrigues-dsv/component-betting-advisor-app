@@ -1,1 +1,38 @@
-﻿{"id": 140, "name": "La Liga", "country": "Spain", "teams": [{"id": 529, "name": "Barcelona"}, {"id": 530, "name": "Atlético Madrid"}, {"id": 531, "name": "Athletic Bilbao"}, {"id": 536, "name": "Sevilla"}, {"id": 541, "name": "Real Madrid"}, {"id": 543, "name": "Real Betis"}, {"id": 548, "name": "Real Sociedad"}], "match_days": {"tuesday": 2, "wednesday": 2, "saturday": 5, "sunday": 4}, "typical_hours": [14, 16, 18, 21]}
+{
+  "id": 140,
+  "name": "La Liga",
+  "country": "Spain",
+  "teams": [
+    {"id": 529, "name": "Barcelona"},
+    {"id": 530, "name": "Atlético Madrid"},
+    {"id": 531, "name": "Athletic Bilbao"},
+    {"id": 532, "name": "Valencia"},
+    {"id": 533, "name": "Villarreal"},
+    {"id": 534, "name": "Sevilla"},
+    {"id": 535, "name": "Betis"},
+    {"id": 536, "name": "Real Madrid"},
+    {"id": 537, "name": "Celta Vigo"},
+    {"id": 538, "name": "Espanyol"},
+    {"id": 539, "name": "Getafe"},
+    {"id": 540, "name": "Granada"},
+    {"id": 541, "name": "Osasuna"},
+    {"id": 542, "name": "Rayo Vallecano"},
+    {"id": 543, "name": "Real Sociedad"},
+    {"id": 544, "name": "Mallorca"},
+    {"id": 545, "name": "Almería"},
+    {"id": 546, "name": "Cádiz"},
+    {"id": 547, "name": "Elche"},
+    {"id": 548, "name": "Girona"}
+  ],
+  "match_days": {
+    "monday": 1,
+    "tuesday": 0,
+    "wednesday": 0,
+    "thursday": 0,
+    "friday": 1,
+    "saturday": 5,
+    "sunday": 3
+  },
+  "typical_hours": [14, 16, 18, 21]
+}
+

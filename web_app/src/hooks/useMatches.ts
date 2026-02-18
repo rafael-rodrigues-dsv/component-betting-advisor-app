@@ -14,7 +14,11 @@ export function useMatches(selectedLeague: string) {
   const loadMatches = useCallback(async () => {
     setLoading(true);
     try {
+      // Backend agora retorna semana toda por padrão (hoje até domingo)
+      console.log('🔄 Carregando jogos da semana...');
       const data = await matchesApi.getMatches(selectedLeague);
+
+      console.log(`📊 Total: ${data.matches?.length || 0} jogos carregados`);
       setMatches(data.matches || []);
     } catch (error) {
       console.error('Erro ao carregar jogos:', error);
