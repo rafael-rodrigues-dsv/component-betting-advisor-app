@@ -2,7 +2,7 @@
  * MatchList Component
  */
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Match, League, Strategy, Odds } from '../../types';
+import type { Match, League, Odds } from '../../types';
 import type { PeriodDays } from '../../hooks/useMatches';
 import { MatchCard } from './MatchCard';
 import { Loading } from '../common/Loading';
@@ -11,11 +11,11 @@ interface MatchListProps {
   matches: Match[];
   selectedMatches: Set<string>;
   onSelectMatch: (matchId: string) => void;
+  onSelectAll: (matchIds: string[]) => void;
+  onDeselectAll: () => void;
   analyzing: boolean;
   onAnalyze: () => void;
   // Filters
-  strategy: Strategy;
-  onStrategyChange: (strategy: Strategy) => void;
   leagues: League[];
   selectedLeague: string;
   onLeagueChange: (leagueId: string) => void;
@@ -74,10 +74,10 @@ export const MatchList: React.FC<MatchListProps> = ({
   matches,
   selectedMatches,
   onSelectMatch,
+  onSelectAll,
+  onDeselectAll,
   analyzing,
   onAnalyze,
-  strategy,
-  onStrategyChange,
   leagues,
   selectedLeague,
   onLeagueChange,
@@ -163,6 +163,35 @@ export const MatchList: React.FC<MatchListProps> = ({
     }
   };
 
+  // Toggle seleção de todos os jogos de uma data
+  const toggleSelectDate = (_dateKey: string, dateMatches: Match[]) => {
+    const dateMatchIds = dateMatches.map(m => m.id);
+    const allSelected = dateMatchIds.every(id => selectedMatches.has(id));
+    if (allSelected) {
+      // Deseleciona todos do dia
+      dateMatchIds.forEach(id => {
+        if (selectedMatches.has(id)) onSelectMatch(id);
+      });
+    } else {
+      // Seleciona todos do dia que ainda não estão selecionados
+      const toSelect = dateMatchIds.filter(id => !selectedMatches.has(id));
+      onSelectAll(toSelect);
+    }
+  };
+
+  // Selecionar/Deselecionar todos os filtrados
+  const handleSelectAll = () => {
+    const allFilteredIds = filteredMatches.map(m => m.id);
+    const allSelected = allFilteredIds.every(id => selectedMatches.has(id));
+    if (allSelected) {
+      onDeselectAll();
+    } else {
+      onSelectAll(allFilteredIds);
+    }
+  };
+
+  const allFilteredSelected = filteredMatches.length > 0 && filteredMatches.every(m => selectedMatches.has(m.id));
+
   const periodOptions: { days: 3 | 7 | 14; label: string; icon: string; description: string }[] = [
     { days: 3, label: '3 Dias', icon: '⚡', description: 'Jogos próximos' },
     { days: 7, label: '7 Dias', icon: '📅', description: 'Próxima semana' },
@@ -219,15 +248,6 @@ export const MatchList: React.FC<MatchListProps> = ({
         <>
           <div className="filters-bar">
             <div className="filter-group">
-              <label>🎯 Estratégia:</label>
-              <select value={strategy} onChange={(e) => onStrategyChange(e.target.value as Strategy)}>
-                <option value="BALANCED">⚖️ Balanceada</option>
-                <option value="CONSERVATIVE">🛡️ Conservadora</option>
-                <option value="VALUE_BET">💰 Value Bet</option>
-                <option value="AGGRESSIVE">🔥 Agressiva</option>
-              </select>
-            </div>
-            <div className="filter-group">
               <label>🏆 Campeonato:</label>
               <select value={selectedLeague} onChange={(e) => onLeagueChange(e.target.value)}>
                 <option value="all">Todos</option>
@@ -251,15 +271,26 @@ export const MatchList: React.FC<MatchListProps> = ({
                 </span>
               )}
             </div>
-            {matches.length > 0 && matchesByDate.length > 1 && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={toggleAll}
-                title={expandedDates.size === matchesByDate.length ? 'Minimizar Todas' : 'Expandir Todas'}
-              >
-                {expandedDates.size === matchesByDate.length ? '📁 Minimizar Todas' : '📂 Expandir Todas'}
-              </button>
-            )}
+            <div className="actions-bar-right">
+              {filteredMatches.length > 0 && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleSelectAll}
+                  title={allFilteredSelected ? 'Deselecionar Todos' : 'Selecionar Todos'}
+                >
+                  {allFilteredSelected ? '☐ Deselecionar Todos' : '☑️ Selecionar Todos'}
+                </button>
+              )}
+              {matches.length > 0 && matchesByDate.length > 1 && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={toggleAll}
+                  title={expandedDates.size === matchesByDate.length ? 'Minimizar Todas' : 'Expandir Todas'}
+                >
+                  {expandedDates.size === matchesByDate.length ? '📁 Minimizar Todas' : '📂 Expandir Todas'}
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -279,16 +310,31 @@ export const MatchList: React.FC<MatchListProps> = ({
         </div>
       ) : (
         <div className="matches-container">
-          {matchesByDate.map(([date, dateMatches]) => (
-            <div key={date} className="matches-date-group">
-              <div className="date-header" onClick={() => toggleDateExpand(date)}>
-                <span className="date-icon">📅</span>
-                <h3 className="date-title">{formatDateHeader(date)}</h3>
-                <span className="date-count">{dateMatches.length} {dateMatches.length === 1 ? 'jogo' : 'jogos'}</span>
-                <span className="expand-toggle">
-                  {expandedDates.has(date) ? '▼' : '►'}
-                </span>
-              </div>
+          {matchesByDate.map(([date, dateMatches]) => {
+            const dateMatchIds = dateMatches.map(m => m.id);
+            const allDaySelected = dateMatchIds.every(id => selectedMatches.has(id));
+            const someDaySelected = dateMatchIds.some(id => selectedMatches.has(id));
+
+            return (
+              <div key={date} className="matches-date-group">
+                <div className="date-header">
+                  <label
+                    className="date-checkbox-label"
+                    onClick={(e) => { e.stopPropagation(); toggleSelectDate(date, dateMatches); }}
+                  >
+                    <span className={`date-checkbox ${allDaySelected ? 'checked' : someDaySelected ? 'partial' : ''}`}>
+                      {allDaySelected ? '☑️' : someDaySelected ? '▪️' : '☐'}
+                    </span>
+                  </label>
+                  <div className="date-header-content" onClick={() => toggleDateExpand(date)}>
+                    <span className="date-icon">📅</span>
+                    <h3 className="date-title">{formatDateHeader(date)}</h3>
+                    <span className="date-count">{dateMatches.length} {dateMatches.length === 1 ? 'jogo' : 'jogos'}</span>
+                    <span className="expand-toggle">
+                      {expandedDates.has(date) ? '▼' : '►'}
+                    </span>
+                  </div>
+                </div>
               {expandedDates.has(date) && (
                 <div className="matches-grid">
                   {dateMatches.map((match) => (
@@ -303,7 +349,8 @@ export const MatchList: React.FC<MatchListProps> = ({
                 </div>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
     </>

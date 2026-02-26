@@ -45,6 +45,12 @@ class Bet:
     final_score: Optional[str] = None
     """Placar final do jogo (ex: "2 x 1")"""
 
+    status: Optional[str] = None
+    """Status da partida (ex: "Not Started", "First Half")"""
+
+    status_short: Optional[str] = None
+    """Status curto da partida (ex: "NS", "1H", "FT")"""
+
     def is_won(self) -> bool:
         """Verifica se a aposta foi ganha"""
         return self.result == "WON"

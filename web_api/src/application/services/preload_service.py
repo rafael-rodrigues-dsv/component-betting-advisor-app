@@ -15,6 +15,7 @@ import logging
 from infrastructure.cache.cache_manager import get_cache
 from infrastructure.external.api_football.service import APIFootballService
 from domain.constants.constants import MAIN_LEAGUES
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ class PreloadService:
 
     def _get_dates(self, days: int = 7) -> List[date]:
         """Retorna lista de datas desde hoje até 'days' dias à frente."""
-        today = date.today()
+        today = settings.today()
+        logger.info(f"📅 Hoje (timezone {settings.TIMEZONE}): {today.isoformat()}")
         return [today + timedelta(days=i) for i in range(days)]
 
     def _get_cached_period(self) -> int:
@@ -43,7 +45,8 @@ class PreloadService:
         cached_date = self.cache.get("preload:last_date")
         cached_days = self.cache.get("preload:last_days")
 
-        if cached_date == date.today().isoformat() and cached_days:
+        today_str = settings.today().isoformat()
+        if cached_date == today_str and cached_days:
             return int(cached_days)
 
         return 0
@@ -100,7 +103,7 @@ class PreloadService:
                 logger.error(f"  ❌ Erro ao pré-carregar liga {league_id}: {e}")
 
         # Marca período cacheado (hoje + total de dias)
-        self.cache.set("preload:last_date", date.today().isoformat(), ttl_seconds=86400)
+        self.cache.set("preload:last_date", settings.today().isoformat(), ttl_seconds=86400)
         self.cache.set("preload:last_days", days, ttl_seconds=86400)
 
         logger.info(f"✅ Pré-carregamento concluído! {total_fixtures} fixtures carregados")

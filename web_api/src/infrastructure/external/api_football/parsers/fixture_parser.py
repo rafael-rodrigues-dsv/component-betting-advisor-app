@@ -2,9 +2,11 @@
 Fixture Parser - Parseia response da API-Football /fixtures
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Dict, Any, List
 import logging
+
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +48,10 @@ class FixtureParser:
         away_logo = FixtureParser._map_logo(teams_data.get("away", {}).get("name", ""),
                                            teams_data.get("away", {}).get("logo", ""))
 
-        # Timestamp: API retorna Unix timestamp (int), converte para YYYY-MM-DD
+        # Timestamp: API retorna Unix timestamp (int), converte para YYYY-MM-DD na timezone local
         raw_timestamp = fixture_data.get("timestamp")
         if isinstance(raw_timestamp, int):
-            timestamp_str = datetime.fromtimestamp(raw_timestamp, tz=timezone.utc).strftime("%Y-%m-%d")
+            timestamp_str = datetime.fromtimestamp(raw_timestamp, tz=settings.tz).strftime("%Y-%m-%d")
         elif isinstance(raw_timestamp, str):
             timestamp_str = raw_timestamp[:10]  # Pega só YYYY-MM-DD
         else:
@@ -57,9 +59,18 @@ class FixtureParser:
             date_str = fixture_data.get("date", "")
             timestamp_str = date_str[:10] if date_str else ""
 
+        # Converte date para timezone local para agrupamento correto no frontend
+        raw_date = fixture_data.get("date") or ""
+        if isinstance(raw_timestamp, int):
+            # Converte timestamp Unix para datetime na timezone local
+            local_dt = datetime.fromtimestamp(raw_timestamp, tz=settings.tz)
+            local_date_str = local_dt.isoformat()
+        else:
+            local_date_str = raw_date
+
         return {
             "id": str(fixture_data.get("id") or ""),
-            "date": fixture_data.get("date") or "",
+            "date": local_date_str,
             "timestamp": timestamp_str,
             "status": (fixture_data.get("status") or {}).get("long") or "Not Started",
             "status_short": (fixture_data.get("status") or {}).get("short") or "NS",

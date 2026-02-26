@@ -25,7 +25,9 @@ const formatOutcome = (market: string, outcome: string): string => {
     return names[outcome] || outcome;
   }
   if (market === 'OVER_UNDER') {
-    return outcome === 'OVER' ? '⬆️ Mais de 2.5 gols' : '⬇️ Menos de 2.5 gols';
+    if (outcome.startsWith('OVER')) return '⬆️ Mais de 2.5 gols';
+    if (outcome.startsWith('UNDER')) return '⬇️ Menos de 2.5 gols';
+    return outcome;
   }
   if (market === 'BTTS') {
     return outcome === 'YES' ? '✅ Sim' : '❌ Não';
@@ -46,9 +48,10 @@ const formatRecommendation = (rec: string): string => {
 interface PredictionCardProps {
   prediction: Prediction;
   onAddToTicket: (prediction: Prediction, market: MarketPrediction) => void;
+  showAddButton?: boolean;
 }
 
-export const PredictionCard: React.FC<PredictionCardProps> = ({ prediction, onAddToTicket }) => {
+export const PredictionCard: React.FC<PredictionCardProps> = ({ prediction, onAddToTicket, showAddButton = true }) => {
   return (
     <div className="prediction-card">
       <div className="prediction-header">
@@ -83,9 +86,11 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({ prediction, onAd
                 {formatRecommendation(market.recommendation)}
               </span>
             </div>
-            <button className="add-to-ticket-btn" onClick={() => onAddToTicket(prediction, market)}>
-              ➕ Adicionar ao Bilhete
-            </button>
+            {showAddButton && (
+              <button className="add-to-ticket-btn" onClick={() => onAddToTicket(prediction, market)}>
+                ➕ Adicionar ao Bilhete
+              </button>
+            )}
           </div>
         ))}
       </div>

@@ -102,6 +102,7 @@ export interface Prediction {
   strategy_used: string;
   bookmaker_id?: string;
   bookmaker_name?: string;
+  odds_by_bookmaker?: Record<string, Record<string, number>>;
 }
 
 // ============================================
@@ -120,6 +121,8 @@ export interface TicketBet {
   bookmaker_id?: string;
   result?: string | null;
   final_score?: string | null;
+  status?: string | null;
+  status_short?: string | null;
 }
 
 export interface Ticket {

@@ -91,9 +91,21 @@ class DatabaseConnection:
                 confidence REAL NOT NULL,
                 result TEXT,
                 final_score TEXT,
+                status TEXT,
+                status_short TEXT,
                 FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
             )
         """)
+
+        # Adiciona colunas status se não existirem (migração)
+        try:
+            cursor.execute("ALTER TABLE bets ADD COLUMN status TEXT")
+        except sqlite3.OperationalError:
+            pass  # Coluna já existe
+        try:
+            cursor.execute("ALTER TABLE bets ADD COLUMN status_short TEXT")
+        except sqlite3.OperationalError:
+            pass  # Coluna já existe
 
         # Índices para performance
         cursor.execute("""

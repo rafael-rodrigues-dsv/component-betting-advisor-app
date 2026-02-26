@@ -2,6 +2,9 @@
 
 Collection completa da **Betting Advisor API** para testes e desenvolvimento local.
 
+**Versão:** 4.0.0  
+**Status:** ✅ API-Football Real (sem mocks)
+
 ---
 
 ## 📦 Como Importar no Postman
@@ -13,24 +16,10 @@ Collection completa da **Betting Advisor API** para testes e desenvolvimento loc
 3. Arraste o arquivo `Betting-Advisor-API-Local.postman_collection.json` ou clique em **Upload Files**
 4. Clique em **Import**
 
-### 2. **Importar Environment (Opcional)**
-
-Para facilitar testes com variáveis pré-configuradas:
-
-1. Clique em **Import**
-2. Selecione o arquivo `Betting-Advisor-Local.postman_environment.json`
-3. Clique em **Import**
-4. No canto superior direito, selecione o environment **"Betting Advisor - Local"**
-
-### 3. **Verificar Variáveis**
+### 2. **Verificar Variáveis**
 
 A collection já vem com a variável configurada:
 - **`base_url`**: `http://localhost:8000`
-
-Se precisar alterar:
-1. Clique nos `...` ao lado da collection
-2. **Edit** → aba **Variables**
-3. Altere o valor de `base_url`
 
 ---
 
@@ -56,10 +45,9 @@ GET http://localhost:8000/health
 
 ## 📚 Estrutura da Collection
 
-A collection está organizada em **7 pastas principais** com ícones para fácil identificação:
+A collection está organizada em **8 pastas principais**:
 
 ### ❤️ **1. Health Check**
-Verificar se a API está online e funcionando.
 
 | Endpoint | Descrição |
 |----------|-----------|
@@ -67,25 +55,48 @@ Verificar se a API está online e funcionando.
 
 **Response:**
 ```json
-{
-  "status": "ok"
-}
+{ "status": "ok" }
 ```
 
 ---
 
-### ⚽ **2. Matches (Jogos)**
+### 📦 **2. Preload (Pré-carregamento)**
+Carregar fixtures da API-Football sob demanda.
+
+| Endpoint | Descrição |
+|----------|-----------|
+| `POST /api/v1/preload/fetch?days=3` | Pré-carrega fixtures para 3 dias |
+| `POST /api/v1/preload/fetch?days=7` | Pré-carrega fixtures para 7 dias |
+| `POST /api/v1/preload/fetch?days=14` | Pré-carrega fixtures para 14 dias |
+| `GET /api/v1/preload/status` | Status do cache |
+
+**Response (fetch):**
+```json
+{
+  "success": true,
+  "message": "Pré-carregamento concluído",
+  "date_from": "2026-02-26",
+  "date_to": "2026-02-28",
+  "total_fixtures": 39,
+  "total_odds": 0
+}
+```
+
+> **Nota:** O preload carrega apenas fixtures, não odds. Odds são carregadas via batch ou refresh individual.
+
+---
+
+### ⚽ **3. Matches (Jogos)**
 Buscar jogos disponíveis por data, liga, etc.
 
-| Endpoint | Descrição | Ícone |
-|----------|-----------|-------|
-| `GET /api/v1/matches` | Todos os jogos de hoje | 📋 |
-| `GET /api/v1/matches?date=2026-02-17` | Jogos de uma data específica | 📅 |
-| `GET /api/v1/matches?league_id=71` | Jogos do Brasileirão | 🏆 |
-| `GET /api/v1/matches?date=2026-02-17&league_id=71` | Brasileirão em uma data | 🏆📅 |
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /api/v1/matches?date_from=...&date_to=...` | Jogos no período |
+| `GET /api/v1/matches?date_from=...&date_to=...&league_id=71` | Jogos do Brasileirão |
 
 **Parâmetros:**
-- `date`: Data no formato `YYYY-MM-DD` (opcional, padrão: hoje)
+- `date_from`: Data início (YYYY-MM-DD)
+- `date_to`: Data fim (YYYY-MM-DD)
 - `league_id`: ID da liga (opcional)
 
 **League IDs Importantes:**
@@ -97,176 +108,107 @@ Buscar jogos disponíveis por data, liga, etc.
 - **61** - Ligue 1 (França)
 - **135** - Serie A (Itália)
 
-**Response:**
-```json
-{
-  "success": true,
-  "date": "2026-02-17",
-  "count": 12,
-  "matches": [
-    {
-      "id": "712026021700",
-      "date": "2026-02-17T16:30:00Z",
-      "timestamp": "2026-02-17",
-      "status": "Not Started",
-      "league": {
-        "id": "71",
-        "name": "Brasileirão Série A",
-        "country": "Brazil",
-        "logo": "http://localhost:8000/static/leagues/71.png",
-        "type": "league"
-      },
-      "home_team": {
-        "id": "797",
-        "name": "Vasco",
-        "logo": {
-          "url": "http://localhost:8000/static/escudos/vasco.png",
-          "type": "LOCAL"
-        }
-      },
-      "away_team": {
-        "id": "3568",
-        "name": "Palmeiras",
-        "logo": {
-          "url": "http://localhost:8000/static/escudos/palmeiras.png",
-          "type": "LOCAL"
-        }
-      },
-      "round": {
-        "type": "round",
-        "name": "Rodada 1"
-      },
-      "venue": {
-        "name": "Stadium Vasco",
-        "city": "Brazil"
-      },
-      "odds": {
-        "bet365": {
-          "home": 1.93,
-          "draw": 3.26,
-          "away": 3.59,
-          "over_25": 2.16,
-          "under_25": 1.8,
-          "btts_yes": 2.08,
-          "btts_no": 1.58
-        },
-        "betano": {
-          "home": 1.97,
-          "draw": 3.19,
-          "away": 3.63,
-          "over_25": 2.18,
-          "under_25": 1.78,
-          "btts_yes": 2.12,
-          "btts_no": 1.55
-        }
-      }
-    }
-  ]
-}
-```
-
 ---
 
-### 🏅 **3. Leagues (Ligas)**
-Buscar ligas/campeonatos disponíveis.
+### 📊 **4. Odds**
+Buscar odds de partidas.
 
-| Endpoint | Descrição | Ícone |
-|----------|-----------|-------|
-| `GET /api/v1/leagues` | Todas as ligas disponíveis | 📜 |
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `GET /api/v1/matches/{id}/odds` | GET | Odds de uma partida (cache ou API) |
+| `POST /api/v1/matches/{id}/odds/refresh` | POST | Força refresh de odds + status |
+| `POST /api/v1/matches/odds/batch` | POST | Odds em lote |
 
-**Response:**
+**Response (odds):**
 ```json
 {
   "success": true,
-  "count": 7,
-  "leagues": [
-    {
-      "id": "71",
-      "name": "Brasileirão Série A",
-      "country": "Brazil",
-      "logo": "🇧🇷",
-      "type": "league"
+  "fixture_id": "1387913",
+  "odds": {
+    "bet365": {
+      "home": 2.10,
+      "draw": 3.20,
+      "away": 2.80,
+      "over_25": 1.85,
+      "under_25": 1.95,
+      "btts_yes": 1.72,
+      "btts_no": 2.05
     },
-    {
-      "id": "39",
-      "name": "Premier League",
-      "country": "England",
-      "logo": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-      "type": "league"
+    "betano": {
+      "home": 2.15,
+      "draw": 3.25,
+      "away": 2.75,
+      "over_25": 1.90,
+      "under_25": 1.90,
+      "btts_yes": 1.75,
+      "btts_no": 2.00
     }
-  ]
+  }
+}
+```
+
+**Refresh Response (inclui status):**
+```json
+{
+  "success": true,
+  "odds": { ... },
+  "status": "Not Started",
+  "status_short": "NS"
+}
+```
+
+**Batch Request:**
+```json
+{
+  "fixture_ids": ["1387913", "1387914", "1387915"]
 }
 ```
 
 ---
 
-### 💰 **4. Bookmakers (Casas de Apostas)**
-Buscar casas de apostas disponíveis.
+### 🏅 **5. Leagues e Bookmakers**
 
-| Endpoint | Descrição | Ícone |
-|----------|-----------|-------|
-| `GET /api/v1/bookmakers` | Todas as casas disponíveis | 🎰 |
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /api/v1/leagues` | Ligas disponíveis |
+| `GET /api/v1/bookmakers` | Casas de apostas suportadas |
 
-**Response:**
+**Response (bookmakers):**
 ```json
 {
   "success": true,
-  "count": 5,
+  "count": 2,
   "bookmakers": [
-    {
-      "id": "bet365",
-      "name": "Bet365",
-      "logo": "💰"
-    },
-    {
-      "id": "betano",
-      "name": "Betano",
-      "logo": "💰"
-    }
+    { "id": "bet365", "name": "Bet365", "logo": "🟢" },
+    { "id": "betano", "name": "Betano", "logo": "🟡" }
   ]
 }
 ```
 
-**Bookmaker IDs:**
-- `bet365` - Bet365
-- `betano` - Betano
-- `betfair` - Betfair
-- `1xbet` - 1xBet
-- `pinnacle` - Pinnacle
+> **Nota:** Apenas Bet365 e Betano são suportadas. Configurável via `SUPPORTED_BOOKMAKERS` no `.env`.
 
 ---
 
-### 🔮 **5. Predictions (Análises)**
+### 🔮 **6. Predictions (Análises)**
 Analisar jogos selecionados e obter previsões baseadas em estratégias.
 
-| Endpoint | Estratégia | Descrição | Ícone |
-|----------|------------|-----------|-------|
-| `POST /api/v1/predictions/analyze` | Conservative | Favoritos seguros (>70% confiança) | 🛡️ |
-| `POST /api/v1/predictions/analyze` | Balanced | Equilibrado (>60% confiança) | ⚖️ |
-| `POST /api/v1/predictions/analyze` | Value Bet | Apostas de valor (>55% confiança, >5% EV) | 💎 |
-| `POST /api/v1/predictions/analyze` | Aggressive | Alto risco/retorno (>25% confiança) | 🔥 |
+| Endpoint | Descrição |
+|----------|-----------|
+| `POST /api/v1/analyze` | Analisa jogos com estratégia |
 
 **Request Body:**
 ```json
 {
-  "match_ids": [
-    "712026021700",
-    "712026021701"
-  ],
-  "strategy": "CONSERVATIVE",
-  "bookmaker": "bet365"
+  "match_ids": ["1387913", "1387914"],
+  "strategy": "CONSERVATIVE"
 }
 ```
 
 **Estratégias Disponíveis:**
-- `CONSERVATIVE` - Seguro, favoritos claros
-- `BALANCED` - Mix equilibrado
-- `VALUE_BET` - Busca discrepâncias de odds
-- `AGGRESSIVE` - Alto risco, alto retorno
-
-**Bookmakers:**
-- `bet365`
-- `betano`
+- `CONSERVATIVE` — 🛡️ Seguro, favoritos claros (default ao analisar)
+- `BALANCED` — ⚖️ Mix equilibrado
+- `VALUE_BET` — 💰 Busca discrepâncias de odds entre casas
+- `AGGRESSIVE` — 🔥 Alto risco, alto retorno
 
 **Response:**
 ```json
@@ -274,90 +216,92 @@ Analisar jogos selecionados e obter previsões baseadas em estratégias.
   "success": true,
   "count": 2,
   "strategy": "CONSERVATIVE",
-  "bookmaker": "bet365",
   "predictions": [
     {
-      "match_id": "712026021700",
-      "home_team": "Vasco",
+      "id": "1387913",
+      "match_id": "1387913",
+      "home_team": "Flamengo",
       "away_team": "Palmeiras",
       "league": "Brasileirão Série A",
-      "date": "2026-02-17T16:30:00Z",
+      "date": "2026-02-26T20:00:00-03:00",
       "predictions": [
         {
           "market": "MATCH_WINNER",
-          "predicted_outcome": "away",
-          "confidence": 75.5,
-          "odds": 1.85,
+          "predicted_outcome": "HOME",
+          "confidence": 0.55,
+          "odds": 2.10,
           "expected_value": 0.08,
           "recommendation": "RECOMMENDED"
         },
         {
           "market": "OVER_UNDER",
-          "predicted_outcome": "over_25",
-          "confidence": 68.2,
-          "odds": 1.90,
+          "predicted_outcome": "OVER_2.5",
+          "confidence": 0.52,
+          "odds": 1.85,
           "expected_value": 0.05,
           "recommendation": "RECOMMENDED"
         }
       ],
-      "strategy_used": "CONSERVATIVE"
+      "odds_by_bookmaker": {
+        "bet365": { "home": 2.10, "draw": 3.20, "away": 2.80, "over_25": 1.85, "under_25": 1.95 },
+        "betano": { "home": 2.15, "draw": 3.25, "away": 2.75, "over_25": 1.90, "under_25": 1.90 }
+      }
     }
-  ]
+  ],
+  "pre_ticket": {
+    "bets": [...],
+    "total_bets": 2,
+    "combined_odds": 3.89,
+    "message": "Bilhete conservador montado"
+  }
 }
 ```
 
+> **Nota:** `odds_by_bookmaker` é usado pelo frontend para a comparação lado a lado entre Bet365 e Betano.
+
 **Markets (Mercados):**
-- `MATCH_WINNER` - Resultado final (1X2)
-- `OVER_UNDER` - Mais/Menos gols
-- `BTTS` - Ambos marcam
-- `DOUBLE_CHANCE` - Dupla chance
+- `MATCH_WINNER` — Resultado final (1X2)
+- `OVER_UNDER` — Mais/Menos 2.5 gols
+- `BTTS` — Ambos marcam (Sim/Não)
 
 **Recommendations:**
-- `HIGHLY_RECOMMENDED` - Altamente recomendado
-- `RECOMMENDED` - Recomendado
-- `NEUTRAL` - Neutro
-- `NOT_RECOMMENDED` - Não recomendado
-- `AVOID` - Evitar
+- `STRONG_BET` — 🔥 Aposta Forte
+- `RECOMMENDED` — ✅ Recomendada
+- `CONSIDER` — 💭 Considerar
+- `AVOID` — ⛔ Evitar
 
 ---
 
-### 🎫 **6. Tickets (Bilhetes)**
-Gerenciar bilhetes de apostas (múltiplas).
+### 🎫 **7. Tickets (Bilhetes)**
+Gerenciar bilhetes de apostas.
 
-| Endpoint | Método | Descrição | Ícone |
-|----------|--------|-----------|-------|
-| `POST /api/v1/tickets` | POST | Criar novo bilhete | ➕ |
-| `GET /api/v1/tickets` | GET | Listar todos os bilhetes | 📋 |
-| `GET /api/v1/tickets/:ticket_id` | GET | Buscar bilhete específico | 🔍 |
-| `PATCH /api/v1/tickets/:ticket_id/status` | PATCH | Atualizar status | 🔄 |
-| `DELETE /api/v1/tickets/:ticket_id` | DELETE | Deletar bilhete | 🗑️ |
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `POST /api/v1/tickets` | POST | Criar bilhete |
+| `GET /api/v1/tickets` | GET | Listar bilhetes |
+| `GET /api/v1/tickets/{id}` | GET | Detalhes de um bilhete |
+| `DELETE /api/v1/tickets/{id}` | DELETE | Deletar bilhete |
+| `GET /api/v1/tickets/stats/dashboard` | GET | Estatísticas do dashboard |
+| `POST /api/v1/tickets/update-results` | POST | Atualizar resultados reais |
 
 #### **Criar Ticket**
 
 **Request:**
 ```json
 {
-  "name": "Múltipla Brasileirão - Rodada 1",
+  "name": "Rodada 5 - Conservadora - Betano",
   "stake": 50.00,
-  "bookmaker_id": "bet365",
+  "bookmaker_id": "betano",
   "bets": [
     {
-      "match_id": "712026021700",
-      "home_team": "Vasco",
+      "match_id": "1387913",
+      "home_team": "Flamengo",
       "away_team": "Palmeiras",
+      "league": "Brasileirão Série A",
       "market": "MATCH_WINNER",
-      "predicted_outcome": "away",
-      "odds": 1.85,
-      "confidence": 75.5
-    },
-    {
-      "match_id": "712026021701",
-      "home_team": "Fluminense",
-      "away_team": "Atlético-MG",
-      "market": "OVER_UNDER",
-      "predicted_outcome": "over_25",
-      "odds": 1.90,
-      "confidence": 68.2
+      "predicted_outcome": "HOME",
+      "odds": 2.15,
+      "confidence": 0.55
     }
   ]
 }
@@ -367,85 +311,53 @@ Gerenciar bilhetes de apostas (múltiplas).
 ```json
 {
   "success": true,
+  "message": "Bilhete criado com sucesso!",
   "ticket": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
-    "name": "Múltipla Brasileirão - Rodada 1",
+    "name": "Rodada 5 - Conservadora - Betano",
     "stake": 50.00,
-    "bookmaker_id": "bet365",
-    "status": "PENDING",
-    "total_odds": 3.52,
-    "potential_return": 176.00,
-    "bets_count": 2,
-    "created_at": "2026-02-17T15:00:00Z"
+    "bookmaker_id": "betano",
+    "status": "PENDENTE",
+    "combined_odds": 2.15,
+    "potential_return": 107.50,
+    "bets": [
+      {
+        "match_id": "1387913",
+        "home_team": "Flamengo",
+        "away_team": "Palmeiras",
+        "league": "Brasileirão Série A",
+        "market": "MATCH_WINNER",
+        "predicted_outcome": "HOME",
+        "odds": 2.15,
+        "confidence": 0.55,
+        "result": null,
+        "final_score": null,
+        "status": null,
+        "status_short": null
+      }
+    ],
+    "created_at": "2026-02-26T20:00:00"
   }
 }
 ```
 
 **Status:**
-- `PENDING` - Pendente (aguardando resultado)
-- `WON` - Ganho
-- `LOST` - Perdido
-- `CANCELLED` - Cancelado
-
-#### **Listar Tickets**
-
-**Response:**
-```json
-{
-  "success": true,
-  "count": 5,
-  "tickets": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "name": "Múltipla Brasileirão - Rodada 1",
-      "stake": 50.00,
-      "status": "PENDING",
-      "total_odds": 3.52,
-      "potential_return": 176.00,
-      "created_at": "2026-02-17T15:00:00Z"
-    }
-  ]
-}
-```
-
-#### **Atualizar Status**
-
-**Request:**
-```json
-{
-  "status": "WON"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Status atualizado com sucesso",
-  "ticket": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "WON"
-  }
-}
-```
+- `PENDENTE` — Aguardando resultado
+- `GANHOU` — Todas as apostas corretas
+- `PERDEU` — Alguma aposta errada
 
 ---
 
-### 🖼️ **7. Static Assets**
-Acessar recursos estáticos (logos, escudos).
+### 🖼️ **8. Static Assets**
 
-| Endpoint | Descrição | Ícone |
-|----------|-----------|-------|
-| `GET /static/escudos/{team}.png` | Escudo de time | 🛡️ |
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /static/escudos/{team}.png` | Escudo de time |
 
 **Exemplos:**
 - `/static/escudos/flamengo.png`
 - `/static/escudos/palmeiras.png`
 - `/static/escudos/manchester-city.png`
-
-**Escudos Disponíveis:**
-- Brasileirão: flamengo, palmeiras, corinthians, sao-paulo, santos, vasco, etc.
-- Premier League: manchester-city, liverpool, arsenal, chelsea, etc.
 
 ---
 
@@ -456,140 +368,93 @@ Acessar recursos estáticos (logos, escudos).
 GET /health
 ```
 
-### **2. Buscar Jogos de Hoje**
+### **2. Pré-carregar fixtures (3 dias)**
 ```
-GET /api/v1/matches
-```
-
-### **3. Filtrar por Liga**
-```
-GET /api/v1/matches?league_id=71
+POST /api/v1/preload/fetch?days=3
 ```
 
-### **4. Analisar Jogos Selecionados**
+### **3. Buscar Jogos**
 ```
-POST /api/v1/predictions/analyze
-Body: {
-  "match_ids": ["712026021700", "712026021701"],
-  "strategy": "CONSERVATIVE",
-  "bookmaker": "bet365"
-}
+GET /api/v1/matches?date_from=2026-02-26&date_to=2026-02-28
 ```
 
-### **5. Criar Bilhete com Previsões**
+### **4. Carregar Odds em Batch**
+```
+POST /api/v1/matches/odds/batch
+Body: { "fixture_ids": ["1387913", "1387914"] }
+```
+
+### **5. Analisar Jogos (Conservadora)**
+```
+POST /api/v1/analyze
+Body: { "match_ids": ["1387913", "1387914"], "strategy": "CONSERVATIVE" }
+```
+
+### **6. Re-analisar com outra estratégia**
+```
+POST /api/v1/analyze
+Body: { "match_ids": ["1387913", "1387914"], "strategy": "VALUE_BET" }
+```
+
+### **7. Criar Bilhete**
 ```
 POST /api/v1/tickets
-Body: {
-  "name": "Múltipla",
-  "stake": 50.00,
-  "bookmaker_id": "bet365",
-  "bets": [...]
-}
+Body: { "name": "Meu Bilhete", "stake": 50.00, "bookmaker_id": "betano", "bets": [...] }
 ```
 
-### **6. Acompanhar Bilhetes**
+### **8. Acompanhar Bilhetes**
 ```
 GET /api/v1/tickets
 ```
 
-### **7. Atualizar Resultado**
+### **9. Atualizar Resultados Reais**
 ```
-PATCH /api/v1/tickets/{id}/status
-Body: { "status": "WON" }
+POST /api/v1/tickets/update-results
 ```
 
 ---
 
 ## 🔧 Configuração do Backend
 
-### **Modo de Operação**
-
-O backend opera em **modo MOCK** (virtualizado, sem chamadas à API-Football):
+O backend opera em **modo real** (API-Football):
 
 ```env
-# .env.development
-API_FOOTBALL_MODE=mock
-```
-
-**Vantagens:**
-- ✅ Sem limite de requests
-- ✅ Dados instantâneos
-- ✅ Sem necessidade de API key
-- ✅ Dados realistas e consistentes
-
-### **Modo HTTP (Futuro)**
-
-Para usar a API-Football real:
-
-```env
-# .env.production
-API_FOOTBALL_MODE=http
 API_FOOTBALL_KEY=sua_chave_aqui
+API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+TIMEZONE=America/Sao_Paulo
+SUPPORTED_BOOKMAKERS=bet365,betano
+MAIN_LEAGUES=71,73,39,140,78,61,135
 ```
 
----
-
-## 📊 Dados Mockados
-
-### **Ligas Pré-carregadas:**
-- 🇧🇷 Brasileirão Série A (ID: 71)
-- 🏆 Copa do Brasil (ID: 73)
-- 🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League (ID: 39)
-- 🇪🇸 La Liga (ID: 140)
-- 🇩🇪 Bundesliga (ID: 78)
-- 🇫🇷 Ligue 1 (ID: 61)
-- 🇮🇹 Serie A (ID: 135)
-
-### **Período:**
-- Data atual até próximo domingo
-- Fixtures gerados automaticamente
-- Odds de 2 casas (Bet365 e Betano)
-
-### **Cache:**
+**Cache:**
 - SQLite (`web_api/data/cache.db`)
 - TTL: 6 horas (fixtures) / 30 minutos (odds)
-- Renovado automaticamente no startup
+- Incremental: 3→7→14 dias reaproveita cache anterior
 
 ---
 
 ## 🧪 Testando Endpoints
 
-### **Teste 1: Verificar Saúde da API**
 ```bash
+# Health
 curl http://localhost:8000/health
-```
-**Esperado:** `{"status":"ok"}`
 
-### **Teste 2: Buscar Jogos**
-```bash
-curl http://localhost:8000/api/v1/matches
-```
-**Esperado:** JSON com lista de jogos
+# Preload 3 dias
+curl -X POST "http://localhost:8000/api/v1/preload/fetch?days=3"
 
-### **Teste 3: Analisar Jogos (Conservative)**
-```bash
-curl -X POST http://localhost:8000/api/v1/predictions/analyze \
+# Matches
+curl "http://localhost:8000/api/v1/matches?date_from=2026-02-26&date_to=2026-02-28"
+
+# Analyze (Conservative)
+curl -X POST http://localhost:8000/api/v1/analyze \
   -H "Content-Type: application/json" \
-  -d '{
-    "match_ids": ["712026021700"],
-    "strategy": "CONSERVATIVE",
-    "bookmaker": "bet365"
-  }'
-```
-**Esperado:** JSON com análises e recomendações
+  -d '{"match_ids": ["1387913"], "strategy": "CONSERVATIVE"}'
 
-### **Teste 4: Criar Bilhete**
-```bash
+# Criar bilhete
 curl -X POST http://localhost:8000/api/v1/tickets \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "Teste",
-    "stake": 10.00,
-    "bookmaker_id": "bet365",
-    "bets": [...]
-  }'
+  -d '{"name": "Teste", "stake": 10.00, "bookmaker_id": "betano", "bets": [...]}'
 ```
-**Esperado:** JSON com ID do ticket criado
 
 ---
 
@@ -606,70 +471,32 @@ curl -X POST http://localhost:8000/api/v1/tickets \
 
 ### **Erro 500: Internal Server Error**
 - ✅ Veja os logs no terminal do backend
-- ✅ Verifique se o cache está corrompido
-- ✅ Limpe o cache: `rmdir /s /q web_api\data` (Windows) ou `rm -rf web_api/data` (Linux/Mac)
+- ✅ Limpe o cache: `rmdir /s /q web_api\data` (Windows)
 - ✅ Reinicie o backend
 
 ### **Dados Vazios (count: 0)**
-- ✅ Limpe o cache e reinicie o backend
-- ✅ Aguarde o pré-carregamento (logs mostram progresso)
-- ✅ Verifique se a data está correta (hoje ou futuro)
+- ✅ Execute o preload primeiro: `POST /api/v1/preload/fetch?days=3`
+- ✅ Aguarde (logs mostram progresso)
+- ✅ Verifique se a data está correta
 
 ---
 
 ## 📚 Recursos Adicionais
 
-### **Documentação Interativa**
 - 📖 **Swagger UI:** http://localhost:8000/docs
 - 📖 **ReDoc:** http://localhost:8000/redoc
-- 📖 **OpenAPI JSON:** http://localhost:8000/openapi.json
-
-### **Arquivos de Suporte**
-- 📁 `docs/` - Documentação completa
-- 📁 `static/escudos/` - Logos dos times
-- 📁 `web_api/data/` - Cache SQLite
-
----
-
-## 🎨 Ícones da Collection
-
-A collection usa ícones para facilitar a navegação:
-
-- ❤️ Health Check
-- ⚽ Matches (Jogos)
-- 🏅 Leagues (Ligas)
-- 💰 Bookmakers (Casas de Apostas)
-- 🔮 Predictions (Análises)
-  - 🛡️ Conservative
-  - ⚖️ Balanced
-  - 💎 Value Bet
-  - 🔥 Aggressive
-- 🎫 Tickets (Bilhetes)
-  - ➕ Create
-  - 📋 List
-  - 🔍 Get by ID
-  - 🔄 Update
-  - 🗑️ Delete
-- 🖼️ Static Assets
+- 📁 `docs/ARQUITETURA.md` — Arquitetura completa
+- 📁 `docs/FLUXO_FUNCIONAL.md` — Fluxo funcional
 
 ---
 
 ## ✅ Checklist de Uso
 
-- [ ] Backend rodando (`http://localhost:8000/health` retorna OK)
+- [ ] Backend rodando (`/health` retorna OK)
 - [ ] Collection importada no Postman
-- [ ] Environment configurado (opcional)
-- [ ] Testado endpoint `/health`
-- [ ] Testado endpoint `/api/v1/matches`
-- [ ] Testado endpoint `/api/v1/predictions/analyze`
-- [ ] Testado endpoint `/api/v1/tickets` (POST)
-- [ ] Entendido o fluxo completo (matches → analyze → create ticket)
-
----
-
-## 🚀 Pronto para Usar!
-
-A collection está completa com **17 endpoints organizados** em 7 categorias com ícones bonitinhos! 🎨
-
-**Happy Testing!** ⚽💰🎯
-
+- [ ] Preload executado (`POST /preload/fetch?days=3`)
+- [ ] Matches carregados (`GET /matches`)
+- [ ] Odds carregadas (batch ou refresh individual)
+- [ ] Análise testada (`POST /analyze`)
+- [ ] Bilhete criado (`POST /tickets`)
+- [ ] Fluxo completo entendido (preload → matches → odds → analyze → ticket)

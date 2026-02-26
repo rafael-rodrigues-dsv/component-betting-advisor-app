@@ -2,12 +2,13 @@
 Preload Controller - Endpoints de pré-carregamento sob demanda.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 from fastapi import APIRouter, Query
 import logging
 
 from application.services.preload_service import PreloadService
 from web.mappers.preload_mapper import map_preload_status
+from config.settings import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -56,11 +57,11 @@ async def fetch_preload(
     try:
         await preload_service.preload_main_leagues(days=days)
 
-        today = date.today()
+        today = settings.today()
         date_from = today.isoformat()
         date_to = (today + timedelta(days=days - 1)).isoformat()
 
-        logger.info(f"✅ Pré-carregamento concluído: {date_from} até {date_to}")
+        logger.info(f"✅ Pré-carregamento concluído: {date_from} até {date_to} (timezone: {settings.TIMEZONE})")
 
         return {
             "success": True,

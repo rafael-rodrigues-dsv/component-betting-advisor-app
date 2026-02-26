@@ -2057,3 +2057,432 @@ body {
     padding: 3px 8px;
   }
 }
+
+/* ============================================
+   BOOKMAKER COMPARISON
+   ============================================ */
+.bookmaker-comparison-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.comparison-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.comparison-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 2px solid var(--border-color);
+  transition: all 0.3s;
+}
+
+.comparison-card-best {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+.comparison-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comparison-bk-logo { font-size: 24px; }
+
+.comparison-bk-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.comparison-best-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid #10b981;
+  margin-left: auto;
+}
+
+.comparison-bets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.comparison-bet-row {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.comparison-bet-row:last-child { border-bottom: none; }
+
+.comparison-bet-match {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.comparison-bet-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comparison-bet-market {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.comparison-bet-odd {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.comparison-bet-odd.odd-highlight { color: #10b981; }
+
+.comparison-summary {
+  padding: 12px 0;
+  border-top: 2px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.comparison-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.comparison-summary-value {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.comparison-select-btn { width: 100%; }
+
+.comparison-recommendation {
+  margin-top: 20px;
+  padding: 14px 20px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #10b981;
+  text-align: center;
+}
+
+/* ============================================
+   PREDICTIONS SECTION TITLE
+   ============================================ */
+.predictions-section {
+  margin-bottom: 8px;
+}
+
+/* ============================================
+   DATE HEADER CHECKBOX (Select by Day)
+   ============================================ */
+.date-checkbox-label {
+  cursor: pointer;
+  padding: 8px 10px 8px 0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.date-checkbox {
+  font-size: 18px;
+  user-select: none;
+}
+.date-checkbox.checked { color: var(--accent-primary); }
+.date-checkbox.partial { color: var(--text-secondary); }
+
+.date-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+/* ============================================
+   ACTIONS BAR RIGHT
+   ============================================ */
+.actions-bar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ============================================
+   TICKET MATCH STATUS BADGES
+   ============================================ */
+.ticket-match-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.match-status-ns {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.4);
+}
+
+.match-status-live {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  animation: pulse-status 2s infinite;
+}
+
+.match-status-ft {
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.4);
+}
+
+.match-status-susp {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.match-status-tbd {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@media (max-width: 768px) {
+  .comparison-grid { grid-template-columns: 1fr; }
+  .actions-bar-right { flex-wrap: wrap; justify-content: flex-end; }
+  .strategy-options { grid-template-columns: repeat(2, 1fr); }
+  .prediction-compact-market { flex-wrap: wrap; }
+}
+
+/* ============================================
+   STRATEGY SELECTOR
+   ============================================ */
+.strategy-selector {
+  padding: 24px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.strategy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.strategy-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.strategy-match-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.strategy-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.strategy-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.strategy-option:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+.strategy-option.active {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.strategy-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.strategy-icon { font-size: 24px; }
+
+.strategy-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.strategy-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.strategy-loading {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 14px;
+  animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   COMPACT PREDICTIONS SUMMARY
+   ============================================ */
+.predictions-summary {
+  margin-bottom: 24px;
+}
+
+.predictions-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prediction-compact-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.prediction-compact-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.prediction-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prediction-compact-match {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.prediction-compact-league {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prediction-compact-markets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prediction-compact-market {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.prediction-compact-market:hover {
+  background: var(--bg-hover);
+}
+
+.pcm-name {
+  color: var(--text-secondary);
+  min-width: 120px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.pcm-outcome {
+  color: var(--text-primary);
+  font-weight: 600;
+  flex: 1;
+}
+
+.pcm-odds {
+  color: var(--odds-color);
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.pcm-confidence {
+  color: var(--text-secondary);
+  font-size: 12px;
+  min-width: 36px;
+  text-align: right;
+}
+
+.pcm-rec {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}

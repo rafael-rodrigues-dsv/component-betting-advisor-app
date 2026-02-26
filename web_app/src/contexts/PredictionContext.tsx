@@ -17,7 +17,10 @@ interface PredictionContextType {
   predictions: Prediction[];
   analyzing: boolean;
   preTicket: PreTicket | null;
+  currentStrategy: Strategy;
+  lastMatchIds: string[];
   analyze: (matchIds: string[], strategy: Strategy) => Promise<boolean>;
+  reAnalyze: (strategy: Strategy) => Promise<boolean>;
   clearPredictions: () => void;
 }
 
@@ -27,6 +30,8 @@ export const PredictionProvider: React.FC<{ children: ReactNode }> = ({ children
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [preTicket, setPreTicket] = useState<PreTicket | null>(null);
+  const [currentStrategy, setCurrentStrategy] = useState<Strategy>('CONSERVATIVE');
+  const [lastMatchIds, setLastMatchIds] = useState<string[]>([]);
 
   const analyze = useCallback(async (matchIds: string[], strategy: Strategy): Promise<boolean> => {
     if (matchIds.length === 0) {
@@ -35,6 +40,8 @@ export const PredictionProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     setAnalyzing(true);
+    setCurrentStrategy(strategy);
+    setLastMatchIds(matchIds);
     try {
       const data = await predictionsApi.analyze(matchIds, strategy);
       if (data.predictions && Array.isArray(data.predictions)) {
@@ -60,6 +67,11 @@ export const PredictionProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
+  const reAnalyze = useCallback(async (strategy: Strategy): Promise<boolean> => {
+    if (lastMatchIds.length === 0) return false;
+    return analyze(lastMatchIds, strategy);
+  }, [lastMatchIds, analyze]);
+
   const clearPredictions = useCallback(() => {
     setPredictions([]);
     setPreTicket(null);
@@ -71,7 +83,10 @@ export const PredictionProvider: React.FC<{ children: ReactNode }> = ({ children
         predictions,
         analyzing,
         preTicket,
+        currentStrategy,
+        lastMatchIds,
         analyze,
+        reAnalyze,
         clearPredictions,
       }}
     >

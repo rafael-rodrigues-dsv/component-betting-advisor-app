@@ -12,7 +12,7 @@ export const MatchesPage: React.FC = () => {
   const [selectedMatches, setSelectedMatches] = useState<Set<string>>(new Set());
 
   // Contexts
-  const { strategy, selectedLeague, setStrategy, setSelectedLeague, setActiveTab } = useApp();
+  const { selectedLeague, setSelectedLeague, setActiveTab } = useApp();
 
   // Hooks
   const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, loadingOdds, oddsProgress, updateMatchOddsAndStatus } = useMatchesContext();
@@ -29,13 +29,26 @@ export const MatchesPage: React.FC = () => {
     setSelectedMatches(newSelected);
   };
 
+  const selectMultiple = (matchIds: string[]) => {
+    setSelectedMatches(prev => {
+      const newSet = new Set(prev);
+      matchIds.forEach(id => newSet.add(id));
+      return newSet;
+    });
+  };
+
+  const deselectAll = () => {
+    setSelectedMatches(new Set());
+  };
+
   const handleAnalyze = async () => {
     if (selectedMatches.size === 0) {
       showWarning('⚠️ Selecione pelo menos um jogo para analisar');
       return;
     }
 
-    const success = await analyze(Array.from(selectedMatches), strategy);
+    // Default: CONSERVATIVE ao analisar pela primeira vez
+    const success = await analyze(Array.from(selectedMatches), 'CONSERVATIVE');
     if (success) {
       setActiveTab('predictions');
     }
@@ -46,10 +59,10 @@ export const MatchesPage: React.FC = () => {
       matches={matches}
       selectedMatches={selectedMatches}
       onSelectMatch={toggleMatchSelection}
+      onSelectAll={selectMultiple}
+      onDeselectAll={deselectAll}
       analyzing={analyzing}
       onAnalyze={handleAnalyze}
-      strategy={strategy}
-      onStrategyChange={setStrategy}
       leagues={leagues}
       selectedLeague={selectedLeague}
       onLeagueChange={setSelectedLeague}
@@ -63,4 +76,3 @@ export const MatchesPage: React.FC = () => {
     />
   );
 };
-

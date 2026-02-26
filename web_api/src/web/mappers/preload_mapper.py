@@ -1,10 +1,10 @@
 """
 Preload Mapper - Converte dados de pré-carregamento para DTOs
 """
-from datetime import date
 from typing import Dict, Any, List
 
 from domain.constants.constants import LEAGUE_NAMES
+from config.settings import settings
 
 
 def map_preload_status(cache_valid: bool, last_date: str = None) -> Dict[str, Any]:
@@ -18,7 +18,7 @@ def map_preload_status(cache_valid: bool, last_date: str = None) -> Dict[str, An
     Returns:
         Dicionário com status do preload
     """
-    today = date.today().isoformat()
+    today = settings.today().isoformat()
 
     # Lista de ligas pré-carregadas (baseado nas constantes)
     leagues = list(LEAGUE_NAMES.values())

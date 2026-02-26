@@ -5,7 +5,7 @@ Match Controller - Lista de jogos (lê do CACHE)
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime, date as date_type, timedelta
+from datetime import datetime, timedelta
 import logging
 
 from application.services.match_application_service import MatchService
@@ -17,6 +17,7 @@ from web.dtos.responses.match_response import (
     BookmakerResponse
 )
 from web.mappers.match_mapper import MatchMapper
+from config.settings import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ async def get_matches(
             match_date = datetime.strptime(date, "%Y-%m-%d").date()
             dates_to_fetch = [match_date]
         except ValueError:
-            match_date = date_type.today()
+            match_date = settings.today()
             dates_to_fetch = [match_date]
     elif date_from and date_to:
         # Modo 2: Range de datas
@@ -92,7 +93,7 @@ async def get_matches(
 
     return MatchesListResponse(
         success=True,
-        date=dates_to_fetch[0].isoformat() if dates_to_fetch else date_type.today().isoformat(),
+        date=dates_to_fetch[0].isoformat() if dates_to_fetch else settings.today().isoformat(),
         count=len(matches_response),
         matches=matches_response
     )
@@ -102,7 +103,7 @@ def _get_week_dates():
     """
     Retorna lista de datas desde hoje até o próximo domingo (mínimo 7 dias).
     """
-    today = date_type.today()
+    today = settings.today()
     dates = [today]
 
     current = today

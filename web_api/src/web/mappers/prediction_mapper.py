@@ -171,41 +171,73 @@ def generate_prediction(match_data: Dict[str, Any], strategy: str) -> Prediction
 
 def create_pre_ticket(predictions: List[PredictionResponse], strategy: str) -> Dict[str, Any]:
     """
-    Cria pré-bilhete automaticamente com a melhor aposta de cada jogo.
+    Cria pré-bilhete diversificado com a melhor aposta de cada jogo.
+
+    Diversifica os mercados para não repetir o mesmo mercado em todos os jogos.
+    Algoritmo:
+    1. Para cada jogo, calcula o melhor mercado
+    2. Conta quantas vezes cada mercado foi usado
+    3. Se um mercado já aparece demais, tenta o próximo melhor
 
     Args:
-        predictions: Lista de previsões
+        predictions: Lista de previsões (cada uma com múltiplos mercados)
         strategy: Estratégia utilizada
 
     Returns:
         Dicionário com dados do pré-bilhete
     """
     pre_ticket_bets = []
+    market_count: Dict[str, int] = {}  # Conta uso de cada mercado
+
+    # Máximo de vezes que um mercado pode aparecer antes de forçar diversificação
+    total_matches = len(predictions)
+    max_per_market = max(1, (total_matches + 2) // 3)  # ~33% dos jogos por mercado
 
     for prediction in predictions:
-        if prediction.predictions:
-            # Pega a primeira aposta (já vem ordenada pela estratégia)
-            best_market = prediction.predictions[0]
-            pre_ticket_bets.append({
-                "match_id": prediction.match_id,
-                "home_team": prediction.home_team,
-                "away_team": prediction.away_team,
-                "league": prediction.league,
-                "market": best_market.market.value,
-                "predicted_outcome": best_market.predicted_outcome,
-                "odds": best_market.odds,
-                "confidence": best_market.confidence
-            })
+        if not prediction.predictions:
+            continue
+
+        best_bet = None
+
+        # Tenta encontrar um mercado que não esteja saturado
+        for market_pred in prediction.predictions:
+            market_key = market_pred.market.value
+            current_count = market_count.get(market_key, 0)
+
+            if current_count < max_per_market:
+                best_bet = market_pred
+                break
+
+        # Se todos saturados, pega o melhor mesmo
+        if not best_bet:
+            best_bet = prediction.predictions[0]
+
+        market_key = best_bet.market.value
+        market_count[market_key] = market_count.get(market_key, 0) + 1
+
+        pre_ticket_bets.append({
+            "match_id": prediction.match_id,
+            "home_team": prediction.home_team,
+            "away_team": prediction.away_team,
+            "league": prediction.league,
+            "market": best_bet.market.value,
+            "predicted_outcome": best_bet.predicted_outcome,
+            "odds": best_bet.odds,
+            "confidence": best_bet.confidence
+        })
 
     # Calcula odd combinada
     combined_odds = 1.0
     for bet in pre_ticket_bets:
         combined_odds *= bet["odds"]
 
+    # Monta resumo de diversificação
+    market_summary = ", ".join([f"{k}: {v}" for k, v in market_count.items()])
+
     return {
         "bets": pre_ticket_bets,
         "total_bets": len(pre_ticket_bets),
         "combined_odds": round(combined_odds, 2),
-        "message": f"Pré-bilhete montado com {len(pre_ticket_bets)} apostas baseado na estratégia {strategy}"
+        "message": f"Pré-bilhete diversificado com {len(pre_ticket_bets)} apostas ({market_summary}) — Estratégia {strategy}"
     }
 

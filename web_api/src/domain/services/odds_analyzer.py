@@ -89,22 +89,19 @@ class OddsAnalyzer:
         Estratégia Conservadora.
 
         Regras:
-        - Favoritos com odds entre 1.50 e 2.00
-        - Confiança mínima de 70%
-        - Evita empates
-        - Foca em probabilidades altas
+        - Favoritos com odds entre 1.20 e 1.80
+        - Confiança mínima de 55% (ajustada por margem)
+        - Foca em probabilidades altas e EV positivo
         """
         predictions = []
 
-        # Analisa cada bookmaker
         for bookmaker_name, bookmaker_odds in odds.bookmakers.items():
 
-            # Verifica vitória da casa
-            if 1.50 <= bookmaker_odds.home <= 2.00:
+            # Verifica vitória da casa (favoritos fortes)
+            if 1.20 <= bookmaker_odds.home <= 1.80:
                 confidence = self._calculate_confidence(bookmaker_odds.home)
-                if confidence >= 0.70:
-                    ev = self._calculate_ev(confidence, bookmaker_odds.home)
-
+                ev = self._calculate_ev(confidence, bookmaker_odds.home)
+                if ev > 0.01:
                     predictions.append(MarketPrediction(
                         market=MarketType.MATCH_WINNER,
                         predicted_outcome="HOME",
@@ -112,16 +109,15 @@ class OddsAnalyzer:
                         odds=bookmaker_odds.home,
                         expected_value=ev,
                         bookmaker=bookmaker_name,
-                        recommendation="STRONG_BUY" if confidence >= 0.75 else "BUY",
-                        reason=f"Favorito seguro com {confidence*100:.1f}% de confiança"
+                        recommendation="STRONG_BUY" if ev > 0.05 else "BUY",
+                        reason=f"Favorito seguro com {confidence*100:.1f}% de confianca"
                     ))
 
-            # Verifica vitória visitante
-            if 1.50 <= bookmaker_odds.away <= 2.00:
+            # Verifica vitória visitante (favoritos fortes)
+            if 1.20 <= bookmaker_odds.away <= 1.80:
                 confidence = self._calculate_confidence(bookmaker_odds.away)
-                if confidence >= 0.70:
-                    ev = self._calculate_ev(confidence, bookmaker_odds.away)
-
+                ev = self._calculate_ev(confidence, bookmaker_odds.away)
+                if ev > 0.01:
                     predictions.append(MarketPrediction(
                         market=MarketType.MATCH_WINNER,
                         predicted_outcome="AWAY",
@@ -129,8 +125,40 @@ class OddsAnalyzer:
                         odds=bookmaker_odds.away,
                         expected_value=ev,
                         bookmaker=bookmaker_name,
-                        recommendation="STRONG_BUY" if confidence >= 0.75 else "BUY",
-                        reason=f"Favorito visitante seguro com {confidence*100:.1f}% de confiança"
+                        recommendation="STRONG_BUY" if ev > 0.05 else "BUY",
+                        reason=f"Favorito visitante seguro com {confidence*100:.1f}% de confianca"
+                    ))
+
+            # Under 2.5 é um mercado conservador
+            if bookmaker_odds.under_25 and 1.20 <= bookmaker_odds.under_25 <= 1.80:
+                confidence = self._calculate_confidence(bookmaker_odds.under_25)
+                ev = self._calculate_ev(confidence, bookmaker_odds.under_25)
+                if ev > 0.01:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.OVER_UNDER,
+                        predicted_outcome="UNDER_2.5",
+                        confidence=confidence,
+                        odds=bookmaker_odds.under_25,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="STRONG_BUY" if ev > 0.05 else "BUY",
+                        reason=f"Under 2.5 conservador ({confidence*100:.1f}% de confianca)"
+                    ))
+
+            # BTTS Nao tambem e conservador
+            if bookmaker_odds.btts_no and 1.20 <= bookmaker_odds.btts_no <= 1.80:
+                confidence = self._calculate_confidence(bookmaker_odds.btts_no)
+                ev = self._calculate_ev(confidence, bookmaker_odds.btts_no)
+                if ev > 0.01:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.BOTH_TEAMS_SCORE,
+                        predicted_outcome="NO",
+                        confidence=confidence,
+                        odds=bookmaker_odds.btts_no,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="STRONG_BUY" if ev > 0.05 else "BUY",
+                        reason=f"BTTS Nao conservador ({confidence*100:.1f}% de confianca)"
                     ))
 
         # Remove duplicatas, mantém melhor EV
@@ -141,8 +169,9 @@ class OddsAnalyzer:
         Estratégia Balanceada.
 
         Regras:
-        - Odds entre 1.70 e 3.50
-        - Confiança mínima de 60%
+        - Odds entre 1.50 e 3.50
+        - Confiança mínima de 30%
+        - EV mínimo de 2%
         - Considera todos os mercados (1X2, Over/Under, BTTS)
         - Balanceia risco e retorno
         """
@@ -152,58 +181,87 @@ class OddsAnalyzer:
 
             # 1X2
             for outcome, odd in [("HOME", bookmaker_odds.home), ("DRAW", bookmaker_odds.draw), ("AWAY", bookmaker_odds.away)]:
-                if 1.70 <= odd <= 3.50:
+                if 1.50 <= odd <= 3.50:
                     confidence = self._calculate_confidence(odd)
-                    if confidence >= 0.60:
-                        ev = self._calculate_ev(confidence, odd)
+                    ev = self._calculate_ev(confidence, odd)
 
-                        if ev > 0.02:  # Mínimo 2% EV
-                            predictions.append(MarketPrediction(
-                                market=MarketType.MATCH_WINNER,
-                                predicted_outcome=outcome,
-                                confidence=confidence,
-                                odds=odd,
-                                expected_value=ev,
-                                bookmaker=bookmaker_name,
-                                recommendation="BUY" if ev > 0.05 else "HOLD",
-                                reason=f"Balanceado com EV de {ev*100:.1f}%"
-                            ))
+                    if ev > 0.02:  # Mínimo 2% EV
+                        predictions.append(MarketPrediction(
+                            market=MarketType.MATCH_WINNER,
+                            predicted_outcome=outcome,
+                            confidence=confidence,
+                            odds=odd,
+                            expected_value=ev,
+                            bookmaker=bookmaker_name,
+                            recommendation="BUY" if ev > 0.05 else "HOLD",
+                            reason=f"Balanceado com EV de {ev*100:.1f}%"
+                        ))
 
             # Over/Under 2.5
-            if bookmaker_odds.over_25 and 1.70 <= bookmaker_odds.over_25 <= 2.50:
+            if bookmaker_odds.over_25 and 1.50 <= bookmaker_odds.over_25 <= 2.50:
                 confidence = self._calculate_confidence(bookmaker_odds.over_25)
-                if confidence >= 0.60:
-                    ev = self._calculate_ev(confidence, bookmaker_odds.over_25)
+                ev = self._calculate_ev(confidence, bookmaker_odds.over_25)
 
-                    if ev > 0.02:
-                        predictions.append(MarketPrediction(
-                            market=MarketType.OVER_UNDER,
-                            predicted_outcome="OVER_2.5",
-                            confidence=confidence,
-                            odds=bookmaker_odds.over_25,
-                            expected_value=ev,
-                            bookmaker=bookmaker_name,
-                            recommendation="BUY" if ev > 0.05 else "HOLD",
-                            reason=f"Over 2.5 balanceado (EV: {ev*100:.1f}%)"
-                        ))
+                if ev > 0.02:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.OVER_UNDER,
+                        predicted_outcome="OVER_2.5",
+                        confidence=confidence,
+                        odds=bookmaker_odds.over_25,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="BUY" if ev > 0.05 else "HOLD",
+                        reason=f"Over 2.5 balanceado (EV: {ev*100:.1f}%)"
+                    ))
+
+            if bookmaker_odds.under_25 and 1.50 <= bookmaker_odds.under_25 <= 2.50:
+                confidence = self._calculate_confidence(bookmaker_odds.under_25)
+                ev = self._calculate_ev(confidence, bookmaker_odds.under_25)
+
+                if ev > 0.02:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.OVER_UNDER,
+                        predicted_outcome="UNDER_2.5",
+                        confidence=confidence,
+                        odds=bookmaker_odds.under_25,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="BUY" if ev > 0.05 else "HOLD",
+                        reason=f"Under 2.5 balanceado (EV: {ev*100:.1f}%)"
+                    ))
 
             # BTTS
-            if bookmaker_odds.btts_yes and 1.70 <= bookmaker_odds.btts_yes <= 2.50:
+            if bookmaker_odds.btts_yes and 1.50 <= bookmaker_odds.btts_yes <= 2.50:
                 confidence = self._calculate_confidence(bookmaker_odds.btts_yes)
-                if confidence >= 0.60:
-                    ev = self._calculate_ev(confidence, bookmaker_odds.btts_yes)
+                ev = self._calculate_ev(confidence, bookmaker_odds.btts_yes)
 
-                    if ev > 0.02:
-                        predictions.append(MarketPrediction(
-                            market=MarketType.BOTH_TEAMS_SCORE,
-                            predicted_outcome="YES",
-                            confidence=confidence,
-                            odds=bookmaker_odds.btts_yes,
-                            expected_value=ev,
-                            bookmaker=bookmaker_name,
-                            recommendation="BUY" if ev > 0.05 else "HOLD",
-                            reason=f"BTTS com bom valor (EV: {ev*100:.1f}%)"
-                        ))
+                if ev > 0.02:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.BOTH_TEAMS_SCORE,
+                        predicted_outcome="YES",
+                        confidence=confidence,
+                        odds=bookmaker_odds.btts_yes,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="BUY" if ev > 0.05 else "HOLD",
+                        reason=f"BTTS Sim com bom valor (EV: {ev*100:.1f}%)"
+                    ))
+
+            if bookmaker_odds.btts_no and 1.50 <= bookmaker_odds.btts_no <= 2.50:
+                confidence = self._calculate_confidence(bookmaker_odds.btts_no)
+                ev = self._calculate_ev(confidence, bookmaker_odds.btts_no)
+
+                if ev > 0.02:
+                    predictions.append(MarketPrediction(
+                        market=MarketType.BOTH_TEAMS_SCORE,
+                        predicted_outcome="NO",
+                        confidence=confidence,
+                        odds=bookmaker_odds.btts_no,
+                        expected_value=ev,
+                        bookmaker=bookmaker_name,
+                        recommendation="BUY" if ev > 0.05 else "HOLD",
+                        reason=f"BTTS Nao com bom valor (EV: {ev*100:.1f}%)"
+                    ))
 
         return self._deduplicate_predictions(predictions)
 
@@ -234,7 +292,7 @@ class OddsAnalyzer:
 
                 if ev > 0.05:  # Mínimo 5% EV
                     predictions.append(MarketPrediction(
-                        market=MarketType.MATCH_WINNER,
+                        market=disc.get('market_type', MarketType.MATCH_WINNER),
                         predicted_outcome=disc['outcome'],
                         confidence=confidence,
                         odds=disc['best_odd'],
@@ -297,20 +355,61 @@ class OddsAnalyzer:
                             reason=f"Over agressivo (odd {bookmaker_odds.over_25:.2f})"
                         ))
 
+            # BTTS Sim agressivo
+            if bookmaker_odds.btts_yes and bookmaker_odds.btts_yes >= 2.00:
+                confidence = self._calculate_confidence(bookmaker_odds.btts_yes)
+                if confidence >= 0.30:
+                    ev = self._calculate_ev(confidence, bookmaker_odds.btts_yes)
+
+                    if ev > -0.05:
+                        predictions.append(MarketPrediction(
+                            market=MarketType.BOTH_TEAMS_SCORE,
+                            predicted_outcome="YES",
+                            confidence=confidence,
+                            odds=bookmaker_odds.btts_yes,
+                            expected_value=ev,
+                            bookmaker=bookmaker_name,
+                            recommendation="BUY" if ev > 0 else "HOLD",
+                            reason=f"BTTS agressivo (odd {bookmaker_odds.btts_yes:.2f})"
+                        ))
+
         return self._deduplicate_predictions(predictions)
 
     def _calculate_confidence(self, odd: float) -> float:
         """
-        Calcula confiança baseada na odd.
+        Calcula confiança (probabilidade estimada) baseada na odd.
 
-        Confiança = Probabilidade Implícita = 1 / odd
+        Aplica correção de margem da casa de apostas (~5-8% de overround).
+        A probabilidade implícita pura (1/odd) inclui a margem da casa,
+        então a probabilidade real é ligeiramente maior para favoritos
+        e menor para azarões.
 
-        Exemplos:
-        - Odd 2.00 = 50% de confiança
-        - Odd 1.50 = 66.7% de confiança
-        - Odd 3.00 = 33.3% de confiança
+        Fórmula: prob_estimada = (1/odd) + ajuste_margem
+
+        O ajuste é proporcional: favoritos ganham mais confiança,
+        azarões ganham menos.
         """
-        return 1 / odd if odd > 0 else 0
+        if odd <= 0:
+            return 0
+
+        implied_prob = 1 / odd
+
+        # Ajuste de margem: assume ~6% de overround total
+        # Favoritos (odds baixas) têm probabilidade subestimada pela odd
+        # Azarões (odds altas) têm probabilidade superestimada
+        margin_adjustment = 0.03  # ~3% de ajuste por lado
+
+        if odd <= 2.00:
+            # Favoritos: a probabilidade real é um pouco MAIOR que a implícita
+            adjusted = implied_prob + margin_adjustment
+        elif odd <= 3.50:
+            # Odds médias: ajuste moderado
+            adjusted = implied_prob + (margin_adjustment * 0.5)
+        else:
+            # Azarões: sem ajuste (a odd já reflete bem o risco)
+            adjusted = implied_prob
+
+        return min(adjusted, 0.95)  # Cap em 95%
 
     def _calculate_ev(self, probability: float, odd: float) -> float:
         """
@@ -339,12 +438,22 @@ class OddsAnalyzer:
         """
         discrepancies = []
 
-        # Para cada mercado (home, draw, away)
-        for outcome in ['home', 'draw', 'away']:
+        # Mercados a comparar: (atributo, outcome_label, market_type)
+        markets_to_check = [
+            ('home', 'HOME', MarketType.MATCH_WINNER),
+            ('draw', 'DRAW', MarketType.MATCH_WINNER),
+            ('away', 'AWAY', MarketType.MATCH_WINNER),
+            ('over_25', 'OVER_2.5', MarketType.OVER_UNDER),
+            ('under_25', 'UNDER_2.5', MarketType.OVER_UNDER),
+            ('btts_yes', 'YES', MarketType.BOTH_TEAMS_SCORE),
+            ('btts_no', 'NO', MarketType.BOTH_TEAMS_SCORE),
+        ]
+
+        for attr, outcome_label, market_type in markets_to_check:
             odds_by_bookmaker = []
 
             for bookmaker_name, bookmaker_odds in odds.bookmakers.items():
-                odd_value = getattr(bookmaker_odds, outcome)
+                odd_value = getattr(bookmaker_odds, attr, None)
                 if odd_value and odd_value > 0:
                     odds_by_bookmaker.append({
                         'bookmaker': bookmaker_name,
@@ -352,16 +461,16 @@ class OddsAnalyzer:
                     })
 
             if len(odds_by_bookmaker) >= 2:
-                # Encontra melhor e pior odd
                 best = max(odds_by_bookmaker, key=lambda x: x['odd'])
                 worst = min(odds_by_bookmaker, key=lambda x: x['odd'])
 
                 diff = best['odd'] - worst['odd']
                 diff_percentage = (diff / worst['odd']) * 100
 
-                if diff_percentage >= 3.0:  # Mínimo 3%
+                if diff_percentage >= 3.0:
                     discrepancies.append({
-                        'outcome': outcome.upper(),
+                        'outcome': outcome_label,
+                        'market_type': market_type,
                         'best_odd': best['odd'],
                         'best_bookmaker': best['bookmaker'],
                         'worst_odd': worst['odd'],

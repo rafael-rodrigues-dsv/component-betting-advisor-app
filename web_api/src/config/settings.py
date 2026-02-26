@@ -7,6 +7,8 @@ Carrega variáveis do arquivo .env e fornece valores padrão seguros.
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from typing import Optional
+from datetime import datetime, date as date_type
+from zoneinfo import ZoneInfo
 
 
 
@@ -68,6 +70,10 @@ class Settings(BaseSettings):
     SUPPORTED_BOOKMAKERS: str = "bet365,betano"
     """IDs das casas de apostas suportadas (separados por vírgula)"""
 
+    # Timezone do sistema (padrão: America/Sao_Paulo)
+    TIMEZONE: str = "America/Sao_Paulo"
+    """Timezone usada para calcular 'hoje' e períodos de datas"""
+
     @property
     def cors_origins_list(self):
         """Retorna CORS_ORIGINS como lista"""
@@ -82,6 +88,19 @@ class Settings(BaseSettings):
     def supported_bookmakers_set(self):
         """Retorna SUPPORTED_BOOKMAKERS como set de strings"""
         return {b.strip() for b in self.SUPPORTED_BOOKMAKERS.split(',') if b.strip()}
+
+    @property
+    def tz(self) -> ZoneInfo:
+        """Retorna o objeto timezone configurado."""
+        return ZoneInfo(self.TIMEZONE)
+
+    def today(self) -> date_type:
+        """Retorna a data de 'hoje' na timezone configurada."""
+        return datetime.now(self.tz).date()
+
+    def now(self) -> datetime:
+        """Retorna data/hora atual na timezone configurada."""
+        return datetime.now(self.tz)
 
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).parent / ".env"),

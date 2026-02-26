@@ -4,7 +4,7 @@ Match Service - Lógica de negócio para matches.
 Lê fixtures do cache. Odds são carregadas sob demanda por partida.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import List, Optional, Dict, Any
 import logging
 
@@ -92,7 +92,7 @@ class MatchService:
         Retorna SEM odds.
         """
         league_ids = [71, 73, 39, 140, 78, 61, 135]
-        today = date.today()
+        today = settings.today()
 
         fixture = None
         for day_offset in range(15):

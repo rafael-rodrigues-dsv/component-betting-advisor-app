@@ -118,7 +118,7 @@ class TicketRepository:
             # Busca bets do ticket
             cursor.execute("""
                 SELECT match_id, home_team, away_team, league, market, predicted_outcome,
-                       odds, confidence, result, final_score
+                       odds, confidence, result, final_score, status, status_short
                 FROM bets
                 WHERE ticket_id = ?
             """, (ticket_id,))
@@ -135,7 +135,9 @@ class TicketRepository:
                     odds=bet_row['odds'],
                     confidence=bet_row['confidence'],
                     result=bet_row['result'],
-                    final_score=bet_row['final_score']
+                    final_score=bet_row['final_score'],
+                    status=bet_row['status'],
+                    status_short=bet_row['status_short']
                 ))
 
             return Ticket(
@@ -180,7 +182,7 @@ class TicketRepository:
                 # Busca bets
                 cursor.execute("""
                     SELECT match_id, home_team, away_team, league, market, predicted_outcome,
-                           odds, confidence, result, final_score
+                           odds, confidence, result, final_score, status, status_short
                     FROM bets
                     WHERE ticket_id = ?
                 """, (ticket_id,))
@@ -197,7 +199,9 @@ class TicketRepository:
                         odds=bet_row['odds'],
                         confidence=bet_row['confidence'],
                         result=bet_row['result'],
-                        final_score=bet_row['final_score']
+                        final_score=bet_row['final_score'],
+                        status=bet_row['status'],
+                        status_short=bet_row['status_short']
                     ))
 
                 tickets.append(Ticket(
@@ -265,9 +269,9 @@ class TicketRepository:
             for bet in bets:
                 cursor.execute("""
                     UPDATE bets
-                    SET result = ?, final_score = ?
+                    SET result = ?, final_score = ?, status = ?, status_short = ?
                     WHERE ticket_id = ? AND match_id = ?
-                """, (bet.result, bet.final_score, ticket_id, bet.match_id))
+                """, (bet.result, bet.final_score, bet.status, bet.status_short, ticket_id, bet.match_id))
 
             conn.commit()
             logger.info(f"✅ Resultados das bets do ticket {ticket_id} atualizados")
@@ -348,7 +352,7 @@ class TicketRepository:
                 # Busca bets
                 cursor.execute("""
                     SELECT match_id, home_team, away_team, league, market, predicted_outcome,
-                           odds, confidence, result, final_score
+                           odds, confidence, result, final_score, status, status_short
                     FROM bets
                     WHERE ticket_id = ?
                 """, (ticket_id,))
@@ -365,7 +369,9 @@ class TicketRepository:
                         odds=bet_row['odds'],
                         confidence=bet_row['confidence'],
                         result=bet_row['result'],
-                        final_score=bet_row['final_score']
+                        final_score=bet_row['final_score'],
+                        status=bet_row['status'],
+                        status_short=bet_row['status_short']
                     ))
 
                 tickets.append(Ticket(

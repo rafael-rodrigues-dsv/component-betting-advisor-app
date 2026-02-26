@@ -94,7 +94,9 @@ def map_bet_domain_to_response(bet: Bet) -> TicketBetResponse:
         odds=bet.odds,
         confidence=bet.confidence,
         result=bet.result,
-        final_score=bet.final_score
+        final_score=bet.final_score,
+        status=bet.status,
+        status_short=bet.status_short
     )
 
 

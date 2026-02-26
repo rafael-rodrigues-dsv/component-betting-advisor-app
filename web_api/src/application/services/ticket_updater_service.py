@@ -136,6 +136,10 @@ class TicketUpdaterService:
                 logger.info(f"   📊 Status da partida: {status}")
                 logger.info(f"   📊 Status completo: {status_data}")
 
+                # Atualiza status da partida na aposta
+                bet.status = status_data.get("long", status)
+                bet.status_short = status
+
                 # Só processa se a partida finalizou
                 if status not in ["FT", "AET", "PEN"]:  # Full Time, After Extra Time, Penalties
                     logger.debug(f"   ⏳ Partida {bet.match_id} ainda não finalizou (status: {status})")
