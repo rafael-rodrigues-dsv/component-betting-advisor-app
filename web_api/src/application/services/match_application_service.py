@@ -1,7 +1,9 @@
 """
 Match Service - Lógica de negócio para matches.
 
-Lê fixtures do cache. Odds são carregadas sob demanda por partida.
+Lê fixtures do cache (key: fixtures:{date}).
+Odds são pré-carregadas em bulk e embutidas nos matches.
+Ligas são extraídas dinamicamente dos dados carregados.
 """
 
 from datetime import date, timedelta
@@ -20,8 +22,9 @@ class MatchService:
     """
     Serviço de matches.
 
-    Busca fixtures do cache (preload).
-    Odds são carregadas sob demanda via get_odds_for_match / refresh_odds_for_match.
+    Busca fixtures do cache (preload BULK por data).
+    Odds são pré-carregadas em bulk e embutidas nos matches.
+    Ligas são dinâmicas (extraídas dos dados carregados).
     """
 
     def __init__(self):
@@ -32,17 +35,61 @@ class MatchService:
         """Filtra apenas partidas ativas (não encerradas)."""
         return [f for f in fixtures if f.get("status_short", "NS") in ACTIVE_STATUSES]
 
-    def get_matches_by_league_and_date(
-        self,
-        league_id: int,
-        match_date: date
-    ) -> List[Dict[str, Any]]:
+    def _get_odds_for_fixture(self, fixture_id: str, fixture_date_str: str) -> Dict[str, Any]:
         """
-        Busca matches de uma liga em uma data específica.
-        Retorna SEM odds — odds são carregadas sob demanda.
-        Filtra apenas partidas ativas (não encerradas).
+        Busca odds de um fixture do cache.
+
+        Primeiro tenta cache individual (odds:{fixture_id}).
+        Se miss, tenta extrair do cache bulk (odds_date:{date}).
+
+        Args:
+            fixture_id: ID do fixture
+            fixture_date_str: Data no formato YYYY-MM-DD (para lookup no bulk cache)
+
+        Returns:
+            Odds por bookmaker (filtrado por suportadas)
         """
-        cache_key = f"fixtures:{league_id}:{match_date.isoformat()}"
+        # 1. Cache individual
+        individual_odds = self.cache.get(f"odds:{fixture_id}")
+        if individual_odds:
+            return {k: v for k, v in individual_odds.items() if k in settings.supported_bookmakers_set}
+
+        # 2. Cache bulk por data
+        bulk_odds = self.cache.get(f"odds_date:{fixture_date_str}")
+        if bulk_odds and fixture_id in bulk_odds:
+            odds = bulk_odds[fixture_id]
+            return {k: v for k, v in odds.items() if k in settings.supported_bookmakers_set}
+
+        return {}
+
+    def _build_match(self, fixture: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Constrói um match a partir de um fixture, embutindo odds do cache.
+        """
+        fixture_id = str(fixture.get("id", ""))
+        # Extrai data YYYY-MM-DD do fixture
+        fixture_date_str = fixture.get("timestamp", "") or fixture.get("date", "")[:10]
+
+        odds = self._get_odds_for_fixture(fixture_id, fixture_date_str)
+
+        return {
+            **fixture,
+            "odds": odds,
+        }
+
+    def get_all_matches_by_date(self, match_date: date) -> List[Dict[str, Any]]:
+        """
+        Busca todos os matches de uma data (todas as ligas).
+        Lê do cache bulk: fixtures:{date}.
+        Embute odds do cache.
+
+        Args:
+            match_date: Data dos matches
+
+        Returns:
+            Lista de todos os matches com odds embutidas
+        """
+        cache_key = f"fixtures:{match_date.isoformat()}"
         fixtures = self.cache.get(cache_key)
 
         if not fixtures:
@@ -52,72 +99,52 @@ class MatchService:
         # Filtra partidas encerradas
         active_fixtures = self._filter_active(fixtures)
 
-        # Monta matches SEM odds (odds são carregadas sob demanda)
-        matches = []
-        for fixture in active_fixtures:
-            match = {
-                **fixture,
-                "odds": {}  # Vazio — frontend carrega sob demanda
-            }
-            matches.append(match)
+        # Monta matches com odds embutidas
+        matches = [self._build_match(f) for f in active_fixtures]
 
-        logger.info(f"✅ {len(matches)} matches ativos para liga {league_id} em {match_date} (total: {len(fixtures)})")
+        logger.info(f"✅ Total: {len(matches)} matches ativos em {match_date} (de {len(fixtures)} total)")
         return matches
 
-    def get_all_matches_by_date(self, match_date: date) -> List[Dict[str, Any]]:
+    def get_matches_by_league_and_date(
+        self,
+        league_id: int,
+        match_date: date
+    ) -> List[Dict[str, Any]]:
         """
-        Busca todos os matches de todas as ligas em uma data.
+        Busca matches de uma liga específica em uma data.
+        Filtra do cache bulk fixtures:{date} por league.id.
 
         Args:
+            league_id: ID da liga
             match_date: Data dos matches
 
         Returns:
-            Lista de todos os matches
+            Lista de matches da liga com odds embutidas
         """
-        # Ligas pré-carregadas
-        league_ids = [71, 73, 39, 140, 78, 61, 135]
+        all_matches = self.get_all_matches_by_date(match_date)
+        league_matches = [m for m in all_matches if str(m.get("league", {}).get("id", "")) == str(league_id)]
 
-        all_matches = []
-
-        for league_id in league_ids:
-            matches = self.get_matches_by_league_and_date(league_id, match_date)
-            all_matches.extend(matches)
-
-        logger.info(f"✅ Total: {len(all_matches)} matches em {match_date}")
-        return all_matches
+        logger.info(f"✅ {len(league_matches)} matches para liga {league_id} em {match_date}")
+        return league_matches
 
     def get_match_by_id(self, fixture_id: str) -> Optional[Dict[str, Any]]:
         """
         Busca um match específico por ID.
-        Retorna SEM odds.
+        Procura em todas as datas cacheadas (até 15 dias à frente).
         """
-        league_ids = [71, 73, 39, 140, 78, 61, 135]
         today = settings.today()
 
-        fixture = None
         for day_offset in range(15):
             search_date = today + timedelta(days=day_offset)
-            for league_id in league_ids:
-                cache_key = f"fixtures:{league_id}:{search_date.isoformat()}"
-                fixtures = self.cache.get(cache_key)
-                if fixtures:
-                    for f in fixtures:
-                        if str(f.get("id")) == str(fixture_id):
-                            fixture = f
-                            break
-                if fixture:
-                    break
-            if fixture:
-                break
+            cache_key = f"fixtures:{search_date.isoformat()}"
+            fixtures = self.cache.get(cache_key)
+            if fixtures:
+                for f in fixtures:
+                    if str(f.get("id")) == str(fixture_id):
+                        return self._build_match(f)
 
-        if not fixture:
-            logger.warning(f"Fixture {fixture_id} não encontrado no cache")
-            return None
-
-        return {
-            **fixture,
-            "odds": {}
-        }
+        logger.warning(f"Fixture {fixture_id} não encontrado no cache")
+        return None
 
     async def get_odds_for_match(self, fixture_id: int) -> Dict[str, Any]:
         """
@@ -128,22 +155,6 @@ class MatchService:
         odds = {k: v for k, v in (raw_odds or {}).items() if k in settings.supported_bookmakers_set}
         logger.info(f"📊 Odds carregadas para fixture {fixture_id}: {list(odds.keys())}")
         return odds
-
-    async def get_odds_batch(self, fixture_ids: List[int]) -> Dict[str, Dict[str, Any]]:
-        """
-        Busca odds de múltiplas partidas (cache ou API).
-        Retorna dict fixture_id → odds.
-        """
-        result = {}
-        for fixture_id in fixture_ids:
-            try:
-                odds = await self.get_odds_for_match(fixture_id)
-                result[str(fixture_id)] = odds
-            except Exception as e:
-                logger.warning(f"⚠️ Erro ao buscar odds do fixture {fixture_id}: {e}")
-                result[str(fixture_id)] = {}
-        logger.info(f"📊 Odds em lote: {len(result)} fixtures processados")
-        return result
 
     async def refresh_odds_for_match(self, fixture_id: int) -> Dict[str, Any]:
         """
@@ -168,77 +179,41 @@ class MatchService:
         Busca o status atualizado de uma partida direto da API (sem cache).
 
         Returns:
-            Dict com status e status_short, ou {} se não encontrou
+            Dict com status, status_short, elapsed, goals
         """
         result = await self.api_service.get_fixture_result(str(fixture_id))
         if not result:
             return {}
 
-        status_data = (result.get("fixture") or {}).get("status") or {}
+        fixture_data = result.get("fixture") or {}
+        status_data = fixture_data.get("status") or {}
+        goals_data = result.get("goals") or {}
+
         return {
             "status": status_data.get("long") or "Not Started",
             "status_short": status_data.get("short") or "NS",
+            "elapsed": status_data.get("elapsed"),
+            "goals": {
+                "home": goals_data.get("home"),
+                "away": goals_data.get("away"),
+            },
         }
 
     def get_leagues(self) -> List[Dict[str, Any]]:
         """
-        Retorna lista de ligas disponíveis.
+        Retorna ligas DINÂMICAS extraídas dos fixtures carregados.
+        Lê do cache: leagues:dynamic
 
         Returns:
-            Lista de ligas
+            Lista de ligas disponíveis no período carregado
         """
-        return [
-            {
-                "id": "71",
-                "name": "Brasileirão Série A",
-                "country": "Brazil",
-                "logo": "🇧🇷",
-                "type": "league"
-            },
-            {
-                "id": "73",
-                "name": "Copa do Brasil",
-                "country": "Brazil",
-                "logo": "🇧🇷",
-                "type": "cup"
-            },
-            {
-                "id": "39",
-                "name": "Premier League",
-                "country": "England",
-                "logo": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-                "type": "league"
-            },
-            {
-                "id": "140",
-                "name": "La Liga",
-                "country": "Spain",
-                "logo": "🇪🇸",
-                "type": "league"
-            },
-            {
-                "id": "78",
-                "name": "Bundesliga",
-                "country": "Germany",
-                "logo": "🇩🇪",
-                "type": "league"
-            },
-            {
-                "id": "61",
-                "name": "Ligue 1",
-                "country": "France",
-                "logo": "🇫🇷",
-                "type": "league"
-            },
-            {
-                "id": "135",
-                "name": "Serie A",
-                "country": "Italy",
-                "logo": "🇮🇹",
-                "type": "league"
-            }
-        ]
+        cached = self.cache.get("leagues:dynamic")
+        if cached:
+            return cached
 
+        # Fallback: sem dados carregados
+        logger.warning("⚠️ Nenhuma liga dinâmica no cache. Faça o preload primeiro.")
+        return []
 
     # Metadados das casas de apostas (logo, nome, etc.)
     BOOKMAKER_META = {
@@ -259,15 +234,7 @@ class MatchService:
     def get_bookmakers(self) -> List[Dict[str, Any]]:
         """
         Retorna lista de casas de apostas disponíveis.
-
-        Lê SUPPORTED_BOOKMAKERS do settings e monta a lista
-        com metadados (nome, logo). A primeira da lista é o padrão.
-
-        Returns:
-            Lista de bookmakers
         """
-        supported = list(settings.supported_bookmakers_set)
-        # Ordena para manter consistência (primeiro da config = default)
         config_order = [b.strip() for b in settings.SUPPORTED_BOOKMAKERS.split(',') if b.strip()]
 
         result = []
@@ -281,4 +248,66 @@ class MatchService:
                     "is_default": i == 0,
                 })
         return result
+
+    async def get_live_updates(self) -> List[Dict[str, Any]]:
+        """
+        Busca fixtures ao vivo da API e retorna updates de placar/status/minuto.
+
+        Filtra apenas fixtures que estão no nosso cache (carregados pelo preload).
+        Atualiza o cache de fixtures com dados atualizados.
+
+        Returns:
+            Lista de dicts com {id, status, status_short, elapsed, goals}
+        """
+        live_fixtures = await self.api_service.get_live_fixtures()
+
+        if not live_fixtures:
+            return []
+
+        # Coleta IDs de fixtures carregados no cache
+        loaded_ids = set()
+        today = settings.today()
+        for day_offset in range(15):
+            search_date = today + timedelta(days=day_offset)
+            cache_key = f"fixtures:{search_date.isoformat()}"
+            cached = self.cache.get(cache_key)
+            if cached:
+                for f in cached:
+                    loaded_ids.add(str(f.get("id")))
+
+        # Filtra apenas fixtures que estão carregados E atualiza o cache
+        updates = []
+        for live in live_fixtures:
+            fid = str(live.get("id"))
+            if fid in loaded_ids:
+                updates.append({
+                    "id": fid,
+                    "status": live.get("status", "Not Started"),
+                    "status_short": live.get("status_short", "NS"),
+                    "elapsed": live.get("elapsed"),
+                    "goals": live.get("goals", {"home": None, "away": None}),
+                })
+
+                # Atualiza fixture no cache
+                self._update_fixture_in_cache(fid, live)
+
+        logger.info(f"🔴 {len(updates)} updates de jogos ao vivo (de {len(live_fixtures)} total da API)")
+        return updates
+
+    def _update_fixture_in_cache(self, fixture_id: str, live_data: Dict[str, Any]):
+        """Atualiza um fixture no cache com dados ao vivo."""
+        today = settings.today()
+        for day_offset in range(15):
+            search_date = today + timedelta(days=day_offset)
+            cache_key = f"fixtures:{search_date.isoformat()}"
+            cached = self.cache.get(cache_key)
+            if cached:
+                for i, f in enumerate(cached):
+                    if str(f.get("id")) == fixture_id:
+                        cached[i]["status"] = live_data.get("status", f.get("status"))
+                        cached[i]["status_short"] = live_data.get("status_short", f.get("status_short"))
+                        cached[i]["elapsed"] = live_data.get("elapsed")
+                        cached[i]["goals"] = live_data.get("goals", f.get("goals", {}))
+                        self.cache.set(cache_key, cached, ttl_seconds=settings.CACHE_TTL_FIXTURES)
+                        return
 

@@ -85,18 +85,27 @@ async def analyze_matches(request: AnalyzeMatchesRequest):
             strategy=strategy,
         )
 
+        # Filtra predictions sem market predictions (análise vazia)
+        domain_predictions = [p for p in domain_predictions if p.predictions]
+
         # Converte domain → DTO
         results = [_domain_to_dto(p) for p in domain_predictions]
 
-        logger.info(f"✅ {len(results)} previsões geradas")
+        logger.info(f"✅ {len(results)} previsões geradas (com markets)")
 
         # Busca odds por bookmaker para cada match (para comparação no frontend)
         odds_by_match = {}
         for p in domain_predictions:
             try:
-                odds_data = await prediction_service.match_service.get_odds_for_match(int(p.match_id))
-                if odds_data:
-                    odds_by_match[p.match_id] = odds_data
+                # Primeiro tenta odds do match_data (cache, sem request extra)
+                match_data = prediction_service.match_service.get_match_by_id(p.match_id)
+                if match_data and match_data.get("odds"):
+                    odds_by_match[p.match_id] = match_data["odds"]
+                else:
+                    # Fallback: busca da API
+                    odds_data = await prediction_service.match_service.get_odds_for_match(int(p.match_id))
+                    if odds_data:
+                        odds_by_match[p.match_id] = odds_data
             except Exception:
                 pass
 

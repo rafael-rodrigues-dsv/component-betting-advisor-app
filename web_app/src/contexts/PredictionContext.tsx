@@ -45,15 +45,25 @@ export const PredictionProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const data = await predictionsApi.analyze(matchIds, strategy);
       if (data.predictions && Array.isArray(data.predictions)) {
-        setPredictions(data.predictions);
+        // Filtra predictions que tenham pelo menos 1 market prediction
+        const validPredictions = data.predictions.filter(
+          (p: any) => p.predictions && p.predictions.length > 0
+        );
+
+        setPredictions(validPredictions);
 
         // Armazena pré-bilhete se veio do backend
         if (data.pre_ticket) {
           setPreTicket(data.pre_ticket);
         }
 
-        showNotification(`✅ ${data.predictions.length} previsão(ões) gerada(s)!`, 'success');
-        return true;
+        if (validPredictions.length > 0) {
+          showNotification(`✅ ${validPredictions.length} previsão(ões) gerada(s)!`, 'success');
+          return true;
+        }
+
+        showError('❌ Nenhuma previsão gerada. Verifique se os jogos possuem odds carregadas.');
+        return false;
       }
 
       showError('❌ Nenhuma previsão foi gerada');

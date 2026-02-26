@@ -16,6 +16,17 @@ from domain.enums.market_type_enum import MarketType
 
 logger = logging.getLogger(__name__)
 
+# Mapeamento de aliases de mercado armazenados no DB
+_MARKET_ALIASES = {
+    "BTTS": "BOTH_TEAMS_SCORE",
+}
+
+
+def _parse_market(value: str) -> MarketType:
+    """Parse market string do banco, tratando aliases como BTTS → BOTH_TEAMS_SCORE."""
+    normalized = _MARKET_ALIASES.get(value, value)
+    return MarketType(normalized)
+
 
 class TicketRepository:
     """
@@ -130,7 +141,7 @@ class TicketRepository:
                     home_team=bet_row['home_team'],
                     away_team=bet_row['away_team'],
                     league=bet_row['league'],
-                    market=MarketType(bet_row['market']),
+                    market=_parse_market(bet_row['market']),
                     predicted_outcome=bet_row['predicted_outcome'],
                     odds=bet_row['odds'],
                     confidence=bet_row['confidence'],
@@ -194,7 +205,7 @@ class TicketRepository:
                         home_team=bet_row['home_team'],
                         away_team=bet_row['away_team'],
                         league=bet_row['league'],
-                        market=MarketType(bet_row['market']),
+                        market=_parse_market(bet_row['market']),
                         predicted_outcome=bet_row['predicted_outcome'],
                         odds=bet_row['odds'],
                         confidence=bet_row['confidence'],
@@ -364,7 +375,7 @@ class TicketRepository:
                         home_team=bet_row['home_team'],
                         away_team=bet_row['away_team'],
                         league=bet_row['league'],
-                        market=MarketType(bet_row['market']),
+                        market=_parse_market(bet_row['market']),
                         predicted_outcome=bet_row['predicted_outcome'],
                         odds=bet_row['odds'],
                         confidence=bet_row['confidence'],

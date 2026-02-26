@@ -1,5 +1,9 @@
 """
 Odds Parser - Parseia response da API-Football /odds
+
+Suporta dois modos:
+- parse(): Single fixture (GET /odds?fixture={id})
+- parse_bulk(): Todas as odds de uma data (GET /odds?date={date})
 """
 
 from typing import Dict, Any
@@ -14,7 +18,7 @@ class OddsParser:
     @staticmethod
     def parse(api_response: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Parseia response da API-Football /odds.
+        Parseia response da API-Football /odds para um único fixture.
 
         Transforma de formato API para formato frontend:
         {
@@ -41,6 +45,50 @@ class OddsParser:
 
         logger.info(f"✅ Odds parseadas para {len(parsed_odds)} casas")
         return parsed_odds
+
+    @staticmethod
+    def parse_bulk(api_response: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Parseia response BULK da API-Football /odds?date={date}.
+
+        Retorna dicionário fixture_id → odds_by_bookmaker.
+        Cada fixture_id mapeia para {"bet365": {...}, "betano": {...}}.
+
+        Args:
+            api_response: JSON da API-Football /odds?date=...
+
+        Returns:
+            Dict[fixture_id_str, Dict[bookmaker_name, bookmaker_odds]]
+        """
+        odds_data = api_response.get("response", [])
+
+        if not odds_data:
+            logger.warning("Nenhuma odd encontrada no bulk")
+            return {}
+
+        result: Dict[str, Dict[str, Any]] = {}
+
+        for fixture_entry in odds_data:
+            fixture_info = fixture_entry.get("fixture", {})
+            fixture_id = str(fixture_info.get("id", ""))
+
+            if not fixture_id:
+                continue
+
+            bookmakers = fixture_entry.get("bookmakers", [])
+            parsed_odds = {}
+
+            for bookmaker in bookmakers:
+                bookmaker_name = bookmaker.get("name", "").lower().replace(" ", "").replace("-", "")
+                bookmaker_odds = OddsParser._parse_bookmaker(bookmaker)
+                if bookmaker_odds:
+                    parsed_odds[bookmaker_name] = bookmaker_odds
+
+            if parsed_odds:
+                result[fixture_id] = parsed_odds
+
+        logger.info(f"✅ Odds bulk parseadas: {len(result)} fixtures com odds")
+        return result
 
     @staticmethod
     def _parse_bookmaker(bookmaker: Dict[str, Any]) -> Dict[str, float]:

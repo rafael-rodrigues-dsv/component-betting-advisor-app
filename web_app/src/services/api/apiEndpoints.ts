@@ -32,14 +32,28 @@ interface OddsResponse {
   odds: Record<string, any>;
   status?: string;
   status_short?: string;
+  elapsed?: number | null;
+  goals?: { home: number | null; away: number | null };
   message?: string;
   error?: string;
 }
 
-interface OddsBatchResponse {
+interface LiveMatchUpdate {
+  id: string;
+  status: string;
+  status_short: string;
+  elapsed: number | null;
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
+}
+
+interface LiveUpdatesResponse {
   success: boolean;
   count: number;
-  odds: Record<string, Record<string, any>>;  // fixture_id → bookmaker → odds
+  updates: LiveMatchUpdate[];
+  error?: string;
 }
 
 export const matchesApi = {
@@ -66,9 +80,9 @@ export const matchesApi = {
   refreshMatchOdds: (fixtureId: string) =>
     apiPost<OddsResponse>(`/matches/${fixtureId}/odds/refresh`, {}),
 
-  /** Busca odds de múltiplas partidas de uma vez (cache ou API) */
-  batchOdds: (fixtureIds: string[]) =>
-    apiPost<OddsBatchResponse>('/matches/odds/batch', { fixture_ids: fixtureIds }),
+  /** Busca updates de jogos ao vivo (placar, status, minuto) */
+  getLiveUpdates: () =>
+    apiGet<LiveUpdatesResponse>('/matches/live'),
 };
 
 // ============================================
@@ -103,6 +117,18 @@ interface PreloadFetchResponse {
   days?: number;
   date_from?: string;
   date_to?: string;
+  total_fixtures?: number;
+  leagues?: League[];
+  dates?: string[];       // Lista de datas YYYY-MM-DD (para chamar /preload/odds)
+  from_cache?: boolean;
+}
+
+interface PreloadOddsResponse {
+  success: boolean;
+  date: string;
+  total_odds: number;
+  from_cache?: boolean;
+  error?: string;
 }
 
 interface PreloadStatusResponse {
@@ -113,8 +139,13 @@ interface PreloadStatusResponse {
 }
 
 export const preloadApi = {
+  /** FASE 1: Carrega fixtures (rápido) */
   fetch: (days: number) =>
     apiPost<PreloadFetchResponse>(`/preload/fetch?days=${days}`, {}),
+
+  /** FASE 2: Carrega odds de UMA data (lento, paginado) */
+  fetchOdds: (date: string) =>
+    apiPost<PreloadOddsResponse>(`/preload/odds?date=${date}`, {}),
 
   getStatus: () =>
     apiGet<PreloadStatusResponse>('/preload/status'),

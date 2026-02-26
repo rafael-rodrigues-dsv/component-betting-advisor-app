@@ -40,22 +40,26 @@ class PredictionApplicationService:
         predictions = []
 
         for match_id in match_ids:
-            # Busca dados do match no cache
+            # Busca dados do match no cache (já vem com odds embutidas do _build_match)
             match_data = self.match_service.get_match_by_id(match_id)
 
             if not match_data:
                 logger.warning(f"⚠️ Match {match_id} não encontrado no cache, pulando...")
                 continue
 
-            # Busca odds (do cache ou API)
-            try:
-                odds_data = await self.match_service.get_odds_for_match(int(match_id))
-            except Exception as e:
-                logger.warning(f"⚠️ Erro ao buscar odds do match {match_id}: {e}")
-                odds_data = {}
+            # 1. Tenta usar odds já embutidas no match (cache bulk/individual)
+            odds_data = match_data.get("odds", {})
+
+            # 2. Se não tem odds embutidas, tenta buscar da API individual
+            if not odds_data:
+                try:
+                    odds_data = await self.match_service.get_odds_for_match(int(match_id))
+                except Exception as e:
+                    logger.warning(f"⚠️ Erro ao buscar odds do match {match_id}: {e}")
+                    odds_data = {}
 
             if not odds_data:
-                logger.warning(f"⚠️ Match {match_id} sem odds, pulando...")
+                logger.warning(f"⚠️ Match {match_id} sem odds (nem em cache nem na API), pulando...")
                 continue
 
             # Converte odds para domain model

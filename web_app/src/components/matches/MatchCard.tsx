@@ -9,21 +9,8 @@
  */
 import React, { useState, useCallback } from 'react';
 import { matchesApi } from '../../services/api';
-import type { Match, Logo, Odds, BookmakerOdds } from '../../types';
+import type { Match, Logo, Odds } from '../../types';
 
-const getLeagueLogo = (leagueName: string): string => {
-  const logos: Record<string, string> = {
-    'Brasileirão Série A': '🇧🇷',
-    'Serie A': '🇧🇷',
-    'Copa do Brasil': '🏆',
-    'Copa Do Brasil': '🏆',
-    'Premier League': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'La Liga': '🇪🇸',
-    'Bundesliga': '🇩🇪',
-    'Ligue 1': '🇫🇷',
-  };
-  return logos[leagueName] || '🏆';
-};
 
 const getTeamLogoUrl = (logo: Logo): string => {
   if (logo.type === 'EXT') return logo.url;
@@ -74,7 +61,7 @@ interface MatchCardProps {
   match: Match;
   isSelected: boolean;
   onSelect: (matchId: string) => void;
-  onOddsRefreshed: (matchId: string, odds: Odds, status?: string, statusShort?: string) => void;
+  onOddsRefreshed: (matchId: string, odds: Odds, status?: string, statusShort?: string, elapsed?: number | null, goals?: { home: number | null; away: number | null }) => void;
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({
@@ -85,6 +72,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const homeLogoUrl = getTeamLogoUrl(match.home_team.logo);
   const awayLogoUrl = getTeamLogoUrl(match.away_team.logo);
   const statusInfo = getStatusInfo(match.status_short || 'NS');
+  const isLive = ['1H', '2H', 'HT', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP'].includes(match.status_short || '');
+  const hasScore = match.goals && (match.goals.home !== null || match.goals.away !== null);
 
   const hasOdds = match.odds && Object.keys(match.odds).length > 0;
   const bookmakerEntries = Object.entries(match.odds || {});
@@ -100,7 +89,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           match.id,
           response.odds as Odds,
           response.status,
-          response.status_short
+          response.status_short,
+          response.elapsed ?? null,
+          response.goals ?? null
         );
       }
     } catch (error) {
@@ -117,12 +108,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     >
       <div className="match-header">
         <div className="match-league">
-          <span className="league-logo">{getLeagueLogo(match.league.name)}</span>
+          {match.league.logo ? (
+            <img src={match.league.logo} alt={match.league.name} className="league-logo-img" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          ) : (
+            <span className="league-logo">🏆</span>
+          )}
           <span>{match.league.name}</span>
           {match.round && <span className="match-round">• {match.round.name}</span>}
         </div>
         <span className={`match-status-badge ${statusInfo.className}`}>
-          {statusInfo.label}
+          {isLive && match.elapsed ? `${statusInfo.label} ${match.elapsed}'` : statusInfo.label}
         </span>
       </div>
 
@@ -142,7 +137,13 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           }} />
           <span className="team-name">{match.home_team.name}</span>
         </div>
-        <span className="match-vs">vs</span>
+        {hasScore ? (
+          <span className={`match-score ${isLive ? 'live' : ''}`}>
+            {match.goals.home ?? 0} - {match.goals.away ?? 0}
+          </span>
+        ) : (
+          <span className="match-vs">vs</span>
+        )}
         <div className="team">
           <img src={awayLogoUrl} alt={match.away_team.name} className="team-logo-img" onError={(e) => {
             e.currentTarget.style.display = 'none';
@@ -205,8 +206,15 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           </>
         ) : (
           <div className="odds-loading-placeholder">
-            <span className="odds-loading-spinner">⏳</span>
-            <span>Carregando odds...</span>
+            <span>📊 Sem odds disponíveis</span>
+            <button
+              className="odds-refresh-btn"
+              onClick={handleRefreshOdds}
+              disabled={refreshingOdds}
+              title="Buscar odds da API"
+            >
+              {refreshingOdds ? '⏳' : '🔄'}
+            </button>
           </div>
         )}
       </div>

@@ -151,6 +151,35 @@ export const PredictionsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Valor da Aposta */}
+      <div className="stake-input-section">
+        <h3 className="section-title">💰 Valor da Aposta</h3>
+        <div className="stake-input-row">
+          <label htmlFor="stake-input">Valor (R$):</label>
+          <input
+            id="stake-input"
+            type="number"
+            className="stake-input"
+            min="1"
+            step="5"
+            value={stake}
+            onChange={(e) => setStake(Number(e.target.value))}
+            placeholder="Ex: 10"
+          />
+          <div className="stake-presets">
+            {[5, 10, 20, 50, 100].map(v => (
+              <button
+                key={v}
+                className={`stake-preset-btn ${stake === v ? 'active' : ''}`}
+                onClick={() => setStake(v)}
+              >
+                R${v}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Comparação entre casas de apostas */}
       {preTicketBets.length > 0 && (
         <BookmakerComparison

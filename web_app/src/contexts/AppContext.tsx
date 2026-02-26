@@ -6,24 +6,29 @@ import type { Tab } from '../types';
 
 interface AppContextType {
   activeTab: Tab;
-  selectedLeague: string;
+  selectedLeagues: Set<string>;
+  selectedStatuses: Set<string>;
   setActiveTab: (tab: Tab) => void;
-  setSelectedLeague: (leagueId: string) => void;
+  setSelectedLeagues: (leagues: Set<string>) => void;
+  setSelectedStatuses: (statuses: Set<string>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [selectedLeague, setSelectedLeague] = useState<string>('all');
+  const [selectedLeagues, setSelectedLeagues] = useState<Set<string>>(new Set());
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set());
 
   return (
     <AppContext.Provider
       value={{
         activeTab,
-        selectedLeague,
+        selectedLeagues,
+        selectedStatuses,
         setActiveTab,
-        setSelectedLeague,
+        setSelectedLeagues,
+        setSelectedStatuses,
       }}
     >
       {children}

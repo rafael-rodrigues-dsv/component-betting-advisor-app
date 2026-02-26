@@ -8,9 +8,8 @@ Responsável por:
 - Calcular status final do bilhete
 """
 
-from typing import List, Dict, Any
+from typing import Dict, Any
 import logging
-from datetime import datetime
 
 from domain.models.ticket_model import Ticket
 from domain.models.bet_model import Bet
@@ -223,7 +222,7 @@ class TicketUpdaterService:
             return False
 
         # BTTS (Both Teams To Score)
-        elif market == MarketType.BTTS:
+        elif market == MarketType.BOTH_TEAMS_SCORE:
             both_scored = home_score > 0 and away_score > 0
             if outcome == "YES" and both_scored:
                 return True

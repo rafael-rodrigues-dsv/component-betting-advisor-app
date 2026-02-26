@@ -38,6 +38,12 @@ class VenueResponse(BaseModel):
     city: str = ""
 
 
+class GoalsResponse(BaseModel):
+    """Placar da partida"""
+    home: Optional[int] = None
+    away: Optional[int] = None
+
+
 class RoundInfoResponse(BaseModel):
     """Informação da rodada/fase"""
     type: str  # "round" ou "phase"
@@ -66,6 +72,8 @@ class MatchResponse(BaseModel):
     timestamp: str  # Data no formato YYYY-MM-DD
     status: str  # "Not Started", "First Half", "Match Finished", etc.
     status_short: str = "NS"  # "NS", "1H", "2H", "HT", "FT", etc.
+    elapsed: Optional[int] = None  # Minuto do jogo (None se não iniciado)
+    goals: GoalsResponse = GoalsResponse()  # Placar
     round: RoundInfoResponse
     venue: VenueResponse
     odds: Dict[str, OddsResponse]  # Dicionário com bookmaker como chave

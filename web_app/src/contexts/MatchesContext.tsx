@@ -16,12 +16,15 @@ interface MatchesContextType {
   preloading: boolean;
   loadingOdds: boolean;
   oddsProgress: { loaded: number; total: number } | null;
+  livePolling: boolean;
   selectedPeriod: PeriodDays | null;
   dataLoaded: boolean;
   loadMatches: (dateFrom?: string, dateTo?: string) => Promise<Match[]>;
   fetchByPeriod: (days: PeriodDays) => Promise<void>;
   updateMatchOdds: (matchId: string, odds: Odds) => void;
-  updateMatchOddsAndStatus: (matchId: string, odds: Odds, status?: string, statusShort?: string) => void;
+  updateMatchOddsAndStatus: (matchId: string, odds: Odds, status?: string, statusShort?: string, elapsed?: number | null, goals?: { home: number | null; away: number | null }) => void;
+  startLivePolling: () => void;
+  stopLivePolling: () => void;
 }
 
 const MatchesContext = createContext<MatchesContextType | undefined>(undefined);
@@ -43,4 +46,3 @@ export const useMatchesContext = (): MatchesContextType => {
   }
   return context;
 };
-

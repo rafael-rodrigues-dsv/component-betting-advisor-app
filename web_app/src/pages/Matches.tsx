@@ -1,7 +1,7 @@
 /**
  * Matches Page - Página de seleção de jogos
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MatchList } from '../components/matches/MatchList';
 import { useMatchesContext } from '../contexts/MatchesContext';
 import { usePrediction } from '../contexts/PredictionContext';
@@ -12,11 +12,21 @@ export const MatchesPage: React.FC = () => {
   const [selectedMatches, setSelectedMatches] = useState<Set<string>>(new Set());
 
   // Contexts
-  const { selectedLeague, setSelectedLeague, setActiveTab } = useApp();
+  const { selectedLeagues, setSelectedLeagues, selectedStatuses, setSelectedStatuses, setActiveTab } = useApp();
 
   // Hooks
-  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, loadingOdds, oddsProgress, updateMatchOddsAndStatus } = useMatchesContext();
+  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, updateMatchOddsAndStatus, loadingOdds, oddsProgress, livePolling, startLivePolling, stopLivePolling } = useMatchesContext();
   const { analyzing, analyze } = usePrediction();
+
+  // Inicia polling ao entrar na aba de jogos, para ao sair
+  useEffect(() => {
+    if (dataLoaded && !loadingOdds) {
+      startLivePolling();
+    }
+    return () => {
+      stopLivePolling();
+    };
+  }, [dataLoaded, loadingOdds, startLivePolling, stopLivePolling]);
 
   // Handlers
   const toggleMatchSelection = (matchId: string) => {
@@ -64,8 +74,10 @@ export const MatchesPage: React.FC = () => {
       analyzing={analyzing}
       onAnalyze={handleAnalyze}
       leagues={leagues}
-      selectedLeague={selectedLeague}
-      onLeagueChange={setSelectedLeague}
+      selectedLeagues={selectedLeagues}
+      onLeaguesChange={setSelectedLeagues}
+      selectedStatuses={selectedStatuses}
+      onStatusesChange={setSelectedStatuses}
       preloading={preloading}
       selectedPeriod={selectedPeriod}
       dataLoaded={dataLoaded}
@@ -73,6 +85,7 @@ export const MatchesPage: React.FC = () => {
       onOddsRefreshed={updateMatchOddsAndStatus}
       loadingOdds={loadingOdds}
       oddsProgress={oddsProgress}
+      livePolling={livePolling}
     />
   );
 };

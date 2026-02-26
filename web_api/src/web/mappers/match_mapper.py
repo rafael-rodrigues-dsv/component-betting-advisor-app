@@ -8,7 +8,8 @@ from web.dtos.responses.match_response import (
     LeagueResponse,
     VenueResponse,
     RoundInfoResponse,
-    OddsResponse
+    OddsResponse,
+    GoalsResponse
 )
 from web.dtos.responses.logo_dto import LogoDTO
 
@@ -94,6 +95,13 @@ class MatchMapper:
                     btts_no=bookmaker_odds.get("btts_no", 0.0)
                 )
 
+        # Mapeia goals (placar)
+        goals_data = match_data.get("goals") or {}
+        goals = GoalsResponse(
+            home=goals_data.get("home"),
+            away=goals_data.get("away"),
+        )
+
         return MatchResponse(
             id=str(match_data.get("id") or ""),
             league=league,
@@ -103,6 +111,8 @@ class MatchMapper:
             timestamp=match_data.get("timestamp") or "",
             status=match_data.get("status") or "Not Started",
             status_short=match_data.get("status_short") or "NS",
+            elapsed=match_data.get("elapsed"),
+            goals=goals,
             round=round_info,
             venue=venue,
             odds=odds_mapped

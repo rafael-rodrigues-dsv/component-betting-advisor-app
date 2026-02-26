@@ -74,6 +74,11 @@ export interface Match {
   timestamp: string;  // Data no formato YYYY-MM-DD
   status: string;
   status_short: string;  // "NS", "1H", "2H", "HT", "FT", etc.
+  elapsed?: number | null;  // Minuto do jogo
+  goals: {
+    home: number | null;
+    away: number | null;
+  };
   round: RoundInfo;
   venue: Venue;
   odds: Odds;  // Pode estar vazio {} — odds são carregadas sob demanda

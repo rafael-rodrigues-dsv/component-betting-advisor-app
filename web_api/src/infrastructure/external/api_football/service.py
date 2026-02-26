@@ -1,11 +1,17 @@
 """
 API-Football Service - Camada de serviço para API-Football
 
-Orquestra client + cache + parsers conforme arquitetura.
+Usa endpoints BULK por data:
+- GET /fixtures?date={date} → todos os fixtures do dia (qualquer liga)
+- GET /odds?date={date} → todas as odds do dia (qualquer liga)
+
+Endpoints individuais mantidos para refresh sob demanda:
+- GET /odds?fixture={id} → odds de um fixture específico
+- GET /fixtures?id={id} → resultado de um fixture específico
 """
 
 from datetime import date
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import logging
 
 from infrastructure.cache.cache_manager import get_cache
@@ -22,67 +28,118 @@ class APIFootballService:
     Serviço de integração com API-Football.
 
     Responsabilidades:
-    - Buscar fixtures e odds
+    - Buscar fixtures e odds por DATA (bulk)
+    - Buscar odds por fixture (individual, para refresh)
     - Cachear com TTL apropriado
     - Parsear responses
     """
 
     def __init__(self):
-        # Inicializa client HTTP com configurações
         self.client = APIFootballClient(
             api_key=settings.API_FOOTBALL_KEY,
             base_url=settings.API_FOOTBALL_BASE_URL
         )
         self.cache = get_cache()
-        logger.info("⚽ APIFootballService inicializado")
+        logger.info("⚽ APIFootballService inicializado (modo BULK por data)")
 
-    async def get_fixtures(self, league_id: int, fixture_date: date) -> List[Dict[str, Any]]:
+    # ========================================
+    # BULK: Fixtures por data
+    # ========================================
+
+    async def get_all_fixtures_by_date(self, fixture_date: date) -> List[Dict[str, Any]]:
         """
-        Busca fixtures com cache (6h).
+        Busca TODOS os fixtures de uma data (qualquer liga) com cache (6h).
+
+        Usa GET /fixtures?date={date} — 1 request por dia.
 
         Args:
-            league_id: ID da liga
             fixture_date: Data dos jogos
 
         Returns:
-            Lista de fixtures parseados
+            Lista de fixtures parseados (todas as ligas)
         """
-        cache_key = f"fixtures:{league_id}:{fixture_date.isoformat()}"
+        cache_key = f"fixtures:{fixture_date.isoformat()}"
 
         # Cache HIT
         cached = self.cache.get(cache_key)
         if cached:
-            logger.debug(f"✅ Cache HIT: {cache_key}")
+            logger.debug(f"✅ Cache HIT: {cache_key} ({len(cached)} fixtures)")
             return cached
 
         # Cache MISS - busca da API
-        logger.debug(f"❌ Cache MISS: {cache_key}")
+        logger.info(f"🌐 Buscando fixtures de {fixture_date.isoformat()} (BULK)...")
 
-        # Resolve a season correta para essa liga
-        season = await self._get_current_season(league_id)
-
-        params = {
-            "league": league_id,
+        api_response = await self.client.get("/fixtures", {
             "date": fixture_date.isoformat()
-        }
-        if season:
-            params["season"] = season
-
-        api_response = await self.client.get("/fixtures", params)
+        })
 
         # Parse
         fixtures = FixtureParser.parse(api_response)
 
-        # Cache (6 horas) - não cacheia listas vazias para permitir retry
+        # Cache (6 horas)
         if fixtures:
-            self.cache.set(cache_key, fixtures, ttl_seconds=21600)
+            self.cache.set(cache_key, fixtures, ttl_seconds=settings.CACHE_TTL_FIXTURES)
 
-        logger.info(f"📥 {len(fixtures)} fixtures obtidos da API e cacheados (liga={league_id}, season={season})")
+        logger.info(f"📥 {len(fixtures)} fixtures obtidos da API (data={fixture_date.isoformat()})")
         return fixtures
+
+    # ========================================
+    # BULK: Odds por data
+    # ========================================
+
+    async def get_all_odds_by_date(self, odds_date: date) -> Dict[str, Dict[str, Any]]:
+        """
+        Busca TODAS as odds de uma data (qualquer fixture) com cache (30min).
+
+        Usa GET /odds?date={date} — 1 request por dia.
+        Também popula cache individual odds:{fixture_id} para cada fixture.
+
+        Args:
+            odds_date: Data das odds
+
+        Returns:
+            Dict[fixture_id_str, Dict[bookmaker_name, bookmaker_odds]]
+        """
+        cache_key = f"odds_date:{odds_date.isoformat()}"
+
+        # Cache HIT
+        cached = self.cache.get(cache_key)
+        if cached:
+            logger.debug(f"✅ Cache HIT: {cache_key} ({len(cached)} fixtures com odds)")
+            return cached
+
+        # Cache MISS - busca da API (COM PAGINAÇÃO — /odds retorna max ~10 por página)
+        logger.info(f"🌐 Buscando odds de {odds_date.isoformat()} (BULK com paginação)...")
+
+        api_response = await self.client.get_all_pages("/odds", {
+            "date": odds_date.isoformat()
+        })
+
+        # Parse bulk
+        all_odds = OddsParser.parse_bulk(api_response)
+
+        # Cache bulk (30 min)
+        if all_odds:
+            self.cache.set(cache_key, all_odds, ttl_seconds=settings.CACHE_TTL_ODDS)
+
+            # Popula cache individual para cada fixture (usado por refresh)
+            for fixture_id, odds in all_odds.items():
+                individual_key = f"odds:{fixture_id}"
+                self.cache.set(individual_key, odds, ttl_seconds=settings.CACHE_TTL_ODDS)
+
+        logger.info(f"📊 {len(all_odds)} fixtures com odds obtidos da API (data={odds_date.isoformat()})")
+        return all_odds
+
+    # ========================================
+    # Individual: Odds por fixture (para refresh)
+    # ========================================
 
     async def get_odds(self, fixture_id: int) -> Dict[str, Any]:
         """
-        Busca odds com cache (30min).
+        Busca odds de um fixture específico com cache (30min).
+
+        Primeiro tenta cache individual (populado pelo bulk).
+        Se miss, busca via GET /odds?fixture={id}.
 
         Args:
             fixture_id: ID do fixture
@@ -92,7 +149,7 @@ class APIFootballService:
         """
         cache_key = f"odds:{fixture_id}"
 
-        # Cache HIT
+        # Cache HIT (pode ter sido populado pelo bulk ou por um refresh anterior)
         cached = self.cache.get(cache_key)
         if cached:
             logger.debug(f"✅ Cache HIT: {cache_key}")
@@ -105,21 +162,24 @@ class APIFootballService:
             "fixture": fixture_id
         })
 
-        # Parse
+        # Parse single
         odds = OddsParser.parse(api_response)
 
-        # Cache (30 minutos = 1800 segundos)
-        self.cache.set(cache_key, odds, ttl_seconds=1800)
+        # Cache (30 minutos)
+        self.cache.set(cache_key, odds, ttl_seconds=settings.CACHE_TTL_ODDS)
 
-        logger.info(f"📊 Odds obtidas da API e cacheadas")
+        logger.info(f"📊 Odds obtidas da API para fixture {fixture_id}")
         return odds
+
+    # ========================================
+    # Individual: Resultado/status de fixture
+    # ========================================
 
     async def get_fixture_result(self, fixture_id: str) -> Dict[str, Any]:
         """
         Busca resultado de uma partida específica (sem cache).
 
-        Na API real: GET /fixtures?id={fixture_id}
-        Retorna status da partida e placar final.
+        GET /fixtures?id={fixture_id}
 
         Args:
             fixture_id: ID do fixture
@@ -133,66 +193,39 @@ class APIFootballService:
             "id": fixture_id
         })
 
-        logger.debug(f"📥 API Response keys: {api_response.keys() if api_response else 'None'}")
-
-        # A API retorna array, pega o primeiro resultado
         results = api_response.get("response", [])
-        logger.debug(f"📋 Response array length: {len(results)}")
 
         if results:
             result = results[0]
             status = result.get("fixture", {}).get("status", {}).get("short", "NS")
             goals = result.get("goals", {})
-            logger.info(f"⚽ Resultado obtido: {fixture_id} (status: {status}, placar: {goals.get('home')} x {goals.get('away')})")
+            logger.info(f"⚽ Resultado: {fixture_id} (status: {status}, placar: {goals.get('home')} x {goals.get('away')})")
             return result
 
-        logger.warning(f"⚠️ Partida {fixture_id} não encontrada (response vazio)")
+        logger.warning(f"⚠️ Partida {fixture_id} não encontrada")
         return None
 
-    async def _get_current_season(self, league_id: int) -> Optional[int]:
+    # ========================================
+    # Live fixtures (polling)
+    # ========================================
+
+    async def get_live_fixtures(self) -> List[Dict[str, Any]]:
         """
-        Resolve a season atual de uma liga via API-Football.
+        Busca todos os fixtures em andamento (ao vivo) direto da API.
 
-        Busca GET /leagues?id={league_id}&current=true e cacheia por 7 dias.
-        Ligas europeias usam o ano de início (ex: 2025 para 2025/2026).
-        Ligas brasileiras usam o ano corrente (ex: 2026).
+        GET /fixtures?live=all
 
-        Args:
-            league_id: ID da liga
+        Sem cache — sempre busca da API para ter dados atualizados.
 
         Returns:
-            Ano da season atual (ex: 2025, 2026) ou None se não encontrar
+            Lista de fixtures parseados (com goals, elapsed, status atualizado)
         """
-        cache_key = f"season:{league_id}"
+        logger.info("🔴 Buscando fixtures ao vivo...")
 
-        # Cache HIT
-        cached = self.cache.get(cache_key)
-        if cached is not None:
-            logger.debug(f"✅ Season cache HIT: liga {league_id} = {cached}")
-            return cached
+        api_response = await self.client.get("/fixtures", {
+            "live": "all"
+        })
 
-        # Cache MISS - busca da API
-        try:
-            api_response = await self.client.get("/leagues", {
-                "id": league_id,
-                "current": "true"
-            })
-
-            leagues = api_response.get("response", [])
-            if leagues:
-                seasons = leagues[0].get("seasons", [])
-                for season in seasons:
-                    if season.get("current"):
-                        year = season["year"]
-                        # Cache por 7 dias (604800 segundos)
-                        self.cache.set(cache_key, year, ttl_seconds=604800)
-                        logger.info(f"📅 Season atual da liga {league_id}: {year}")
-                        return year
-
-            logger.warning(f"⚠️ Season não encontrada para liga {league_id}")
-            return None
-
-        except Exception as e:
-            logger.error(f"❌ Erro ao buscar season da liga {league_id}: {e}")
-            return None
-
+        fixtures = FixtureParser.parse(api_response)
+        logger.info(f"🔴 {len(fixtures)} fixtures ao vivo encontrados")
+        return fixtures

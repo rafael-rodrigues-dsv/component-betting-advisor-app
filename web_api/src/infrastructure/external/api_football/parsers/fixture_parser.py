@@ -1,14 +1,20 @@
 """
 Fixture Parser - Parseia response da API-Football /fixtures
+
+Filtra partidas inconsistentes: status "NS" (não iniciado) cujo
+horário já passou há mais de 3 horas são descartadas.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import logging
 
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Partidas NS com horário passado há mais de X horas são descartadas
+STALE_NS_THRESHOLD_HOURS = 3
 
 
 class FixtureParser:
@@ -19,18 +25,38 @@ class FixtureParser:
         """
         Parseia response da API-Football /fixtures.
 
-        Transforma JSON da API para formato simplificado.
+        Filtra partidas inconsistentes:
+        - Status "NS" cujo horário já passou há mais de 3h → descartada
+        - Partidas em andamento ou finalizadas → mantidas normalmente
         """
         fixtures = api_response.get("response", [])
         parsed_fixtures = []
+        skipped = 0
+
+        now = datetime.now(tz=settings.tz)
+        stale_cutoff = now - timedelta(hours=STALE_NS_THRESHOLD_HOURS)
 
         for fixture in fixtures:
             try:
+                # Verifica se é NS fantasma ANTES de parsear (mais eficiente)
+                fixture_data = fixture.get("fixture", {})
+                status_short = (fixture_data.get("status") or {}).get("short") or "NS"
+                raw_timestamp = fixture_data.get("timestamp")
+
+                if status_short in ("NS", "TBD") and isinstance(raw_timestamp, int):
+                    fixture_dt = datetime.fromtimestamp(raw_timestamp, tz=settings.tz)
+                    if fixture_dt < stale_cutoff:
+                        skipped += 1
+                        continue
+
                 parsed = FixtureParser._parse_single(fixture)
                 parsed_fixtures.append(parsed)
             except Exception as e:
                 logger.error(f"Erro ao parsear fixture: {e}")
                 continue
+
+        if skipped > 0:
+            logger.info(f"⚠️ {skipped} partidas NS descartadas (horário passado há +{STALE_NS_THRESHOLD_HOURS}h)")
 
         logger.info(f"✅ {len(parsed_fixtures)} fixtures parseados")
         return parsed_fixtures
@@ -68,12 +94,23 @@ class FixtureParser:
         else:
             local_date_str = raw_date
 
+        # Goals (placar)
+        goals_data = fixture.get("goals", {})
+
+        # Elapsed (minuto do jogo)
+        elapsed = (fixture_data.get("status") or {}).get("elapsed")
+
         return {
             "id": str(fixture_data.get("id") or ""),
             "date": local_date_str,
             "timestamp": timestamp_str,
             "status": (fixture_data.get("status") or {}).get("long") or "Not Started",
             "status_short": (fixture_data.get("status") or {}).get("short") or "NS",
+            "elapsed": elapsed,
+            "goals": {
+                "home": goals_data.get("home"),
+                "away": goals_data.get("away"),
+            },
             "league": {
                 "id": str(league_data.get("id") or ""),
                 "name": league_data.get("name") or "",

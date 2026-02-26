@@ -1,5 +1,8 @@
 """
 Match Controller - Lista de jogos (lê do CACHE)
+
+Matches agora vêm com odds embutidas do cache bulk.
+Ligas são dinâmicas (extraídas dos fixtures carregados).
 """
 
 from fastapi import APIRouter, Query
@@ -36,18 +39,17 @@ async def get_matches(
     """
     Lista jogos disponíveis para análise.
 
-    Lê do cache preload_service preencheu no startup.
+    Matches vêm com odds embutidas do cache bulk.
+    Ligas são dinâmicas (extraídas dos fixtures carregados).
 
     Modos de uso:
     - Sem parâmetros: Retorna toda a semana (hoje até domingo)
     - date=YYYY-MM-DD: Retorna apenas essa data específica
     - date_from + date_to: Retorna range de datas
     """
-    # Determina quais datas buscar
     dates_to_fetch = []
 
     if date:
-        # Modo 1: Data específica
         try:
             match_date = datetime.strptime(date, "%Y-%m-%d").date()
             dates_to_fetch = [match_date]
@@ -55,7 +57,6 @@ async def get_matches(
             match_date = settings.today()
             dates_to_fetch = [match_date]
     elif date_from and date_to:
-        # Modo 2: Range de datas
         try:
             start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
             end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
@@ -65,10 +66,8 @@ async def get_matches(
                 dates_to_fetch.append(current)
                 current += timedelta(days=1)
         except ValueError:
-            # Fallback para semana toda
             dates_to_fetch = _get_week_dates()
     else:
-        # Modo 3: Semana toda (padrão)
         dates_to_fetch = _get_week_dates()
 
     # Busca matches para todas as datas
@@ -100,9 +99,7 @@ async def get_matches(
 
 
 def _get_week_dates():
-    """
-    Retorna lista de datas desde hoje até o próximo domingo (mínimo 7 dias).
-    """
+    """Retorna lista de datas desde hoje até o próximo domingo (mínimo 7 dias)."""
     today = settings.today()
     dates = [today]
 
@@ -110,23 +107,51 @@ def _get_week_dates():
     days_added = 0
     max_days = 7
 
-    while days_added < max_days or current.weekday() != 6:  # 6 = Domingo
+    while days_added < max_days or current.weekday() != 6:
         current += timedelta(days=1)
         dates.append(current)
         days_added += 1
-
-        if days_added >= 14:  # Limite de segurança
+        if days_added >= 14:
             break
 
     return dates
 
 
+@router.get("/matches/live")
+async def get_live_matches():
+    """
+    Retorna updates de jogos ao vivo (placar, status, minuto).
+
+    Busca GET /fixtures?live=all na API-Football e filtra apenas
+    fixtures que estão carregados no cache (período selecionado).
+
+    Usado pelo frontend para polling a cada 5 segundos.
+    """
+    try:
+        updates = await match_service.get_live_updates()
+        return {
+            "success": True,
+            "count": len(updates),
+            "updates": updates,
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar jogos ao vivo: {e}")
+        return {
+            "success": False,
+            "count": 0,
+            "updates": [],
+            "error": str(e)
+        }
+
+
 @router.get("/leagues", response_model=LeaguesListResponse)
 async def get_leagues():
-    """Lista campeonatos disponíveis"""
+    """
+    Lista campeonatos disponíveis.
+    Retorna ligas DINÂMICAS extraídas dos fixtures carregados.
+    """
     leagues_data = match_service.get_leagues()
 
-    # Mapeia para DTOs
     leagues_response = [
         LeagueResponse(
             id=league["id"],
@@ -150,7 +175,6 @@ async def get_bookmakers():
     """Lista casas de apostas disponíveis"""
     bookmakers_data = match_service.get_bookmakers()
 
-    # Mapeia para DTOs
     bookmakers_response = [
         BookmakerResponse(
             id=bookmaker["id"],
@@ -165,39 +189,6 @@ async def get_bookmakers():
         count=len(bookmakers_response),
         bookmakers=bookmakers_response
     )
-
-
-class OddsBatchRequest(BaseModel):
-    fixture_ids: List[str]
-
-
-@router.post("/matches/odds/batch")
-async def get_odds_batch(request: OddsBatchRequest):
-    """
-    Busca odds de múltiplas partidas de uma vez (cache ou API).
-    Usado após o preload para carregar odds de todos os matches.
-
-    Body: { "fixture_ids": ["123", "456", "789"] }
-    """
-    try:
-        int_ids = [int(fid) for fid in request.fixture_ids]
-        odds_map = await match_service.get_odds_batch(int_ids)
-
-        logger.info(f"📊 Batch odds: {len(odds_map)} fixtures processados")
-
-        return {
-            "success": True,
-            "count": len(odds_map),
-            "odds": odds_map
-        }
-    except Exception as e:
-        logger.error(f"❌ Erro no batch de odds: {e}")
-        return {
-            "success": False,
-            "count": 0,
-            "odds": {},
-            "error": str(e)
-        }
 
 
 @router.get("/matches/{fixture_id}/odds")
@@ -239,6 +230,8 @@ async def refresh_match_odds(fixture_id: str):
             "odds": odds,
             "status": live_status.get("status", "Not Started"),
             "status_short": live_status.get("status_short", "NS"),
+            "elapsed": live_status.get("elapsed"),
+            "goals": live_status.get("goals", {"home": None, "away": None}),
             "message": "Odds e status atualizados com sucesso"
         }
     except Exception as e:
@@ -249,4 +242,3 @@ async def refresh_match_odds(fixture_id: str):
             "odds": {},
             "error": str(e)
         }
-

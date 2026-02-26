@@ -5,6 +5,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import type { Match, League, Odds } from '../../types';
 import type { PeriodDays } from '../../hooks/useMatches';
 import { MatchCard } from './MatchCard';
+import { LeagueMultiSelect } from './LeagueMultiSelect';
+import { StatusMultiSelect } from './StatusMultiSelect';
 import { Loading } from '../common/Loading';
 
 interface MatchListProps {
@@ -17,17 +19,20 @@ interface MatchListProps {
   onAnalyze: () => void;
   // Filters
   leagues: League[];
-  selectedLeague: string;
-  onLeagueChange: (leagueId: string) => void;
+  selectedLeagues: Set<string>;
+  onLeaguesChange: (leagues: Set<string>) => void;
+  selectedStatuses: Set<string>;
+  onStatusesChange: (statuses: Set<string>) => void;
   // Period selector
   preloading: boolean;
   selectedPeriod: PeriodDays | null;
   dataLoaded: boolean;
   onFetchByPeriod: (days: PeriodDays) => void;
-  onOddsRefreshed: (matchId: string, odds: Odds, status?: string, statusShort?: string) => void;
-  // Odds batch loading
+  onOddsRefreshed: (matchId: string, odds: Odds, status?: string, statusShort?: string, elapsed?: number | null, goals?: { home: number | null; away: number | null }) => void;
+  // Odds background loading
   loadingOdds: boolean;
   oddsProgress: { loaded: number; total: number } | null;
+  livePolling: boolean;
 }
 
 // Função auxiliar para formatar data
@@ -79,8 +84,10 @@ export const MatchList: React.FC<MatchListProps> = ({
   analyzing,
   onAnalyze,
   leagues,
-  selectedLeague,
-  onLeagueChange,
+  selectedLeagues,
+  onLeaguesChange,
+  selectedStatuses,
+  onStatusesChange,
   preloading,
   selectedPeriod,
   dataLoaded,
@@ -88,17 +95,32 @@ export const MatchList: React.FC<MatchListProps> = ({
   onOddsRefreshed,
   loadingOdds,
   oddsProgress,
+  livePolling,
 }) => {
   // Estado para controlar quais datas estão expandidas (por padrão, todas expandidas)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
 
-  // Filtra jogos por liga selecionada (client-side)
+  // Contagem de status disponíveis nos matches (para badges no dropdown)
+  const availableStatuses = useMemo(() => {
+    const counts = new Map<string, number>();
+    matches.forEach(m => {
+      const s = m.status_short || 'NS';
+      counts.set(s, (counts.get(s) || 0) + 1);
+    });
+    return counts;
+  }, [matches]);
+
+  // Filtra jogos por ligas e status selecionados (client-side)
   const filteredMatches = useMemo(() => {
-    if (!selectedLeague || selectedLeague === 'all') {
-      return matches;
+    let filtered = matches;
+    if (selectedLeagues.size > 0) {
+      filtered = filtered.filter(match => selectedLeagues.has(match.league.id));
     }
-    return matches.filter(match => match.league.id === selectedLeague);
-  }, [matches, selectedLeague]);
+    if (selectedStatuses.size > 0) {
+      filtered = filtered.filter(match => selectedStatuses.has(match.status_short || 'NS'));
+    }
+    return filtered;
+  }, [matches, selectedLeagues, selectedStatuses]);
 
   // Agrupa jogos filtrados por data
   const matchesByDate = useMemo(() => {
@@ -225,11 +247,14 @@ export const MatchList: React.FC<MatchListProps> = ({
         </div>
         {selectedPeriod && dataLoaded && (
           <div className="period-info">
-            ✅ Dados carregados para <strong>{selectedPeriod} dias</strong> — {filteredMatches.length} jogos {selectedLeague !== 'all' ? `(de ${matches.length} total)` : 'encontrados'}
+            ✅ Dados carregados para <strong>{selectedPeriod} dias</strong> — {filteredMatches.length} jogos {(selectedLeagues.size > 0 || selectedStatuses.size > 0) ? `(de ${matches.length} total)` : 'encontrados'}
+            {livePolling && !loadingOdds && (
+              <span className="live-polling-indicator">🔴 Ao vivo — atualizando a cada 5s</span>
+            )}
             {loadingOdds && oddsProgress && (
               <div className="odds-loading-bar">
                 <div className="odds-loading-text">
-                  📊 Carregando odds: {oddsProgress.loaded}/{oddsProgress.total}
+                  📊 Carregando odds: {oddsProgress.loaded}/{oddsProgress.total} datas
                 </div>
                 <div className="odds-progress-track">
                   <div
@@ -248,11 +273,20 @@ export const MatchList: React.FC<MatchListProps> = ({
         <>
           <div className="filters-bar">
             <div className="filter-group">
-              <label>🏆 Campeonato:</label>
-              <select value={selectedLeague} onChange={(e) => onLeagueChange(e.target.value)}>
-                <option value="all">Todos</option>
-                {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              <label>🏆 Campeonatos:</label>
+              <LeagueMultiSelect
+                leagues={leagues}
+                selectedLeagues={selectedLeagues}
+                onChange={onLeaguesChange}
+              />
+            </div>
+            <div className="filter-group">
+              <label>📊 Status:</label>
+              <StatusMultiSelect
+                selectedStatuses={selectedStatuses}
+                onChange={onStatusesChange}
+                availableStatuses={availableStatuses}
+              />
             </div>
           </div>
 
