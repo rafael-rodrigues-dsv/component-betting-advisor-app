@@ -3,6 +3,15 @@ Constants - Constantes do sistema
 """
 
 # ============================================
+# STATUS DE PARTIDAS
+# ============================================
+# Status que indicam partida ativa (não começou ou em andamento)
+ACTIVE_STATUSES = {"NS", "1H", "2H", "HT", "ET", "BT", "P", "SUSP", "INT", "LIVE", "TBD"}
+
+# Status que indicam partida encerrada
+FINISHED_STATUSES = {"FT", "AET", "PEN", "WO", "AWD", "CANC", "ABD", "PST"}
+
+# ============================================
 # LIGAS (League IDs)
 # ============================================
 LEAGUE_BRASILEIRAO = 71

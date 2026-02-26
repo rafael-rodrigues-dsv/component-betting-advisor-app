@@ -4,14 +4,14 @@
 import React, { useEffect, useState } from 'react';
 import { StatsCard, QuickGuide } from '../components/dashboard';
 import type { DashboardStats } from '../types';
-import { useMatches } from '../hooks/useMatches';
+import { useMatchesContext } from '../contexts/MatchesContext';
 import { usePrediction } from '../contexts/PredictionContext';
 import { useTicket } from '../contexts/TicketContext';
 import { ticketsApi } from '../services/api';
 
 export const DashboardPage: React.FC = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const { matches } = useMatches();
+  const { matches } = useMatchesContext();
   const { predictions } = usePrediction();
   const { tickets, refreshTickets } = useTicket();
 

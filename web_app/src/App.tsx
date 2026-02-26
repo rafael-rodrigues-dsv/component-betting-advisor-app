@@ -6,6 +6,7 @@ import React from 'react';
 // Contexts
 import { AppProvider, useApp } from './contexts/AppContext';
 import { BookmakerProvider } from './contexts/BookmakerContext';
+import { MatchesProvider } from './contexts/MatchesContext';
 import { TicketProvider } from './contexts/TicketContext';
 import { PredictionProvider, usePrediction } from './contexts/PredictionContext';
 
@@ -60,11 +61,13 @@ function App() {
   return (
     <AppProvider>
       <BookmakerProvider>
-        <PredictionProvider>
-          <TicketProvider>
-            <AppContent />
-          </TicketProvider>
-        </PredictionProvider>
+        <MatchesProvider>
+          <PredictionProvider>
+            <TicketProvider>
+              <AppContent />
+            </TicketProvider>
+          </PredictionProvider>
+        </MatchesProvider>
       </BookmakerProvider>
     </AppProvider>
   );

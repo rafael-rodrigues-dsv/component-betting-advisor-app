@@ -102,6 +102,7 @@ class MatchMapper:
             date=match_data.get("date") or "",
             timestamp=match_data.get("timestamp") or "",
             status=match_data.get("status") or "Not Started",
+            status_short=match_data.get("status_short") or "NS",
             round=round_info,
             venue=venue,
             odds=odds_mapped

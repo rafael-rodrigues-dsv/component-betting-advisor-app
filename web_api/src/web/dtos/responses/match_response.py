@@ -64,7 +64,8 @@ class MatchResponse(BaseModel):
     away_team: TeamResponse
     date: str
     timestamp: str  # Data no formato YYYY-MM-DD
-    status: str  # "NS" (Not Started), "LIVE", "FT" (Full Time)
+    status: str  # "Not Started", "First Half", "Match Finished", etc.
+    status_short: str = "NS"  # "NS", "1H", "2H", "HT", "FT", etc.
     round: RoundInfoResponse
     venue: VenueResponse
     odds: Dict[str, OddsResponse]  # Dicionário com bookmaker como chave

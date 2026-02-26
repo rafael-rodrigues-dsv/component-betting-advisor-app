@@ -2,7 +2,7 @@
  * MatchList Component
  */
 import React, { useMemo, useState, useEffect } from 'react';
-import type { Match, League, Bookmaker, Strategy } from '../../types';
+import type { Match, League, Strategy, Odds } from '../../types';
 import type { PeriodDays } from '../../hooks/useMatches';
 import { MatchCard } from './MatchCard';
 import { Loading } from '../common/Loading';
@@ -19,14 +19,15 @@ interface MatchListProps {
   leagues: League[];
   selectedLeague: string;
   onLeagueChange: (leagueId: string) => void;
-  bookmakers: Bookmaker[];
-  selectedBookmaker: string;
-  onBookmakerChange: (bookmakerId: string) => void;
   // Period selector
   preloading: boolean;
   selectedPeriod: PeriodDays | null;
   dataLoaded: boolean;
   onFetchByPeriod: (days: PeriodDays) => void;
+  onOddsRefreshed: (matchId: string, odds: Odds, status?: string, statusShort?: string) => void;
+  // Odds batch loading
+  loadingOdds: boolean;
+  oddsProgress: { loaded: number; total: number } | null;
 }
 
 // Função auxiliar para formatar data
@@ -80,13 +81,13 @@ export const MatchList: React.FC<MatchListProps> = ({
   leagues,
   selectedLeague,
   onLeagueChange,
-  bookmakers,
-  selectedBookmaker,
-  onBookmakerChange,
   preloading,
   selectedPeriod,
   dataLoaded,
   onFetchByPeriod,
+  onOddsRefreshed,
+  loadingOdds,
+  oddsProgress,
 }) => {
   // Estado para controlar quais datas estão expandidas (por padrão, todas expandidas)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
@@ -196,6 +197,19 @@ export const MatchList: React.FC<MatchListProps> = ({
         {selectedPeriod && dataLoaded && (
           <div className="period-info">
             ✅ Dados carregados para <strong>{selectedPeriod} dias</strong> — {filteredMatches.length} jogos {selectedLeague !== 'all' ? `(de ${matches.length} total)` : 'encontrados'}
+            {loadingOdds && oddsProgress && (
+              <div className="odds-loading-bar">
+                <div className="odds-loading-text">
+                  📊 Carregando odds: {oddsProgress.loaded}/{oddsProgress.total}
+                </div>
+                <div className="odds-progress-track">
+                  <div
+                    className="odds-progress-fill"
+                    style={{ width: `${(oddsProgress.loaded / oddsProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -222,33 +236,21 @@ export const MatchList: React.FC<MatchListProps> = ({
             </div>
           </div>
 
-          {/* Bookmaker Tabs */}
-          <div className="bookmaker-tabs">
-            <div className="bookmaker-tabs-header">
-              <span className="bookmaker-tabs-title">🎰 Casa de Apostas</span>
-            </div>
-            <div className="bookmaker-tabs-list">
-              {bookmakers.map(b => (
-                <button
-                  key={b.id}
-                  className={`bookmaker-tab ${selectedBookmaker === b.id ? 'active' : ''}`}
-                  onClick={() => onBookmakerChange(b.id)}
-                >
-                  <span className="bookmaker-tab-logo">{b.logo}</span>
-                  <span className="bookmaker-tab-name">{b.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="actions-bar">
-            <button
-              className="btn btn-primary"
-              disabled={selectedMatches.size === 0 || analyzing}
-              onClick={onAnalyze}
-            >
-              {analyzing ? '⏳ Analisando...' : '🔍 Analisar Selecionados'}
-            </button>
+            <div className="actions-bar-left">
+              <button
+                className="btn btn-primary"
+                disabled={selectedMatches.size === 0 || analyzing}
+                onClick={onAnalyze}
+              >
+                {analyzing ? '⏳ Analisando...' : '🔍 Analisar Selecionados'}
+              </button>
+              {selectedMatches.size > 0 && (
+                <span className="selected-count">
+                  <strong>{selectedMatches.size} selecionado{selectedMatches.size > 1 ? 's' : ''}</strong>
+                </span>
+              )}
+            </div>
             {matches.length > 0 && matchesByDate.length > 1 && (
               <button
                 className="btn btn-secondary btn-sm"
@@ -257,11 +259,6 @@ export const MatchList: React.FC<MatchListProps> = ({
               >
                 {expandedDates.size === matchesByDate.length ? '📁 Minimizar Todas' : '📂 Expandir Todas'}
               </button>
-            )}
-            {selectedMatches.size > 0 && (
-              <span className="selected-count">
-                <strong>{selectedMatches.size} selecionado{selectedMatches.size > 1 ? 's' : ''}</strong>
-              </span>
             )}
           </div>
         </>
@@ -296,11 +293,11 @@ export const MatchList: React.FC<MatchListProps> = ({
                 <div className="matches-grid">
                   {dateMatches.map((match) => (
                     <MatchCard
-                      key={`${match.id}-${selectedBookmaker}`}
+                      key={match.id}
                       match={match}
                       isSelected={selectedMatches.has(match.id)}
                       onSelect={onSelectMatch}
-                      selectedBookmaker={selectedBookmaker}
+                      onOddsRefreshed={onOddsRefreshed}
                     />
                   ))}
                 </div>

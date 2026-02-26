@@ -26,6 +26,22 @@ interface BookmakersResponse {
   bookmakers: Bookmaker[];
 }
 
+interface OddsResponse {
+  success: boolean;
+  fixture_id: string;
+  odds: Record<string, any>;
+  status?: string;
+  status_short?: string;
+  message?: string;
+  error?: string;
+}
+
+interface OddsBatchResponse {
+  success: boolean;
+  count: number;
+  odds: Record<string, Record<string, any>>;  // fixture_id → bookmaker → odds
+}
+
 export const matchesApi = {
   getMatches: (leagueId?: string, date?: string) => {
     const params: any = {};
@@ -35,13 +51,24 @@ export const matchesApi = {
     if (date) {
       params.date = date;
     }
-    // Se não passar date, backend retorna semana toda automaticamente
     return apiGet<MatchesResponse>('/matches', Object.keys(params).length > 0 ? params : undefined);
   },
 
   getLeagues: () => apiGet<LeaguesResponse>('/leagues'),
 
   getBookmakers: () => apiGet<BookmakersResponse>('/bookmakers'),
+
+  /** Busca odds de uma partida (cache ou API) */
+  getMatchOdds: (fixtureId: string) =>
+    apiGet<OddsResponse>(`/matches/${fixtureId}/odds`),
+
+  /** Força refresh das odds de uma partida */
+  refreshMatchOdds: (fixtureId: string) =>
+    apiPost<OddsResponse>(`/matches/${fixtureId}/odds/refresh`, {}),
+
+  /** Busca odds de múltiplas partidas de uma vez (cache ou API) */
+  batchOdds: (fixtureIds: string[]) =>
+    apiPost<OddsBatchResponse>('/matches/odds/batch', { fixture_ids: fixtureIds }),
 };
 
 // ============================================

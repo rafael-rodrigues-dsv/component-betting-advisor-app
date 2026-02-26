@@ -62,6 +62,7 @@ class FixtureParser:
             "date": fixture_data.get("date") or "",
             "timestamp": timestamp_str,
             "status": (fixture_data.get("status") or {}).get("long") or "Not Started",
+            "status_short": (fixture_data.get("status") or {}).get("short") or "NS",
             "league": {
                 "id": str(league_data.get("id") or ""),
                 "name": league_data.get("name") or "",

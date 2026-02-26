@@ -410,11 +410,149 @@ body {
   gap: 8px;
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 16px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
   flex-wrap: wrap;
+}
+
+/* Match Header (league + status) */
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.match-header .match-league {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+/* Status Badge */
+.match-status-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.status-ns {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.status-tbd {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.status-live {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+.status-susp {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-ft {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Odds Header (bookmaker label + refresh btn) */
+.odds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.odds-refresh-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.odds-refresh-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+}
+
+.odds-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Odds Loading Placeholder (while batch is loading) */
+.odds-loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.odds-loading-spinner {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Odds Batch Loading Progress Bar */
+.odds-loading-bar {
+  margin-top: 10px;
+}
+
+.odds-loading-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.odds-progress-track {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.odds-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .league-logo {
@@ -525,46 +663,75 @@ body {
   gap: 8px;
 }
 
-.odds-bookmaker-label {
-  font-size: 11px;
+.odds-compare-title {
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 600;
-  text-transform: capitalize;
-  text-align: center;
 }
 
-.odds-values {
-  display: flex;
-  justify-content: space-around;
-  gap: 12px;
+/* Comparative Odds Table */
+.odds-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
 }
 
-.odd-item {
-  text-align: center;
-  flex: 1;
-  padding: 8px;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  transition: all 0.2s;
-}
-
-.odd-item:hover {
-  background: var(--bg-hover);
-}
-
-.odd-label {
+.odds-compare-table thead th {
+  padding: 6px 8px;
   font-size: 11px;
+  font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: center;
 }
 
-.odd-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--odds-color);
+.odds-compare-table thead th.odds-col-bookmaker {
+  text-align: left;
+}
+
+.odds-compare-table tbody tr {
+  transition: background 0.15s;
+}
+
+.odds-compare-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.odds-col-bookmaker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.odds-col-bookmaker .bk-logo {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.odds-col-bookmaker .bk-name {
+  font-size: 12px;
+}
+
+.odds-col-value {
+  text-align: center;
+  padding: 8px 6px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Highlight: melhor odd de cada mercado */
+.odds-col-value.best-odd {
+  color: #4ade80;
+  font-weight: 800;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 6px;
 }
 
 /* Actions Bar */
@@ -577,6 +744,13 @@ body {
   border-radius: 16px;
   margin-bottom: 32px;
   border: 1px solid var(--border-color);
+  gap: 16px;
+}
+
+.actions-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .selected-count {

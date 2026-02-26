@@ -4,7 +4,8 @@ Preload Service - Pré-carregamento de fixtures das ligas principais.
 Executado sob demanda via POST /api/v1/preload/fetch?days=N.
 O usuário escolhe o período (3, 7 ou 14 dias) na interface.
 
-ATUALIZADO: Usa APIFootballService conforme arquitetura.
+Cache incremental: 3 dias → 7 dias reaproveita cache → 14 dias reaproveita cache.
+NÃO carrega odds — odds são carregadas sob demanda por partida.
 """
 
 from datetime import date, timedelta
@@ -22,121 +23,87 @@ class PreloadService:
     """
     Serviço de pré-carregamento de dados.
 
-    Busca fixtures e odds das ligas principais via API-Football
-    e cacheia para uso rápido pelo frontend.
+    Busca apenas fixtures (sem odds) das ligas principais via API-Football.
+    Suporta cache incremental por período (3 → 7 → 14 dias).
     """
-
 
     def __init__(self):
         self.cache = get_cache()
         self.api_service = APIFootballService()
-        self.last_preload_date = None
 
     def _get_dates(self, days: int = 7) -> List[date]:
-        """
-        Retorna lista de datas desde hoje até 'days' dias à frente.
-
-        Args:
-            days: Número de dias a carregar (3, 7 ou 14)
-
-        Returns:
-            Lista de dates (hoje + próximos dias)
-        """
+        """Retorna lista de datas desde hoje até 'days' dias à frente."""
         today = date.today()
         return [today + timedelta(days=i) for i in range(days)]
 
+    def _get_cached_period(self) -> int:
+        """
+        Retorna o período já cacheado (0 se nenhum ou de outro dia).
+        """
+        cached_date = self.cache.get("preload:last_date")
+        cached_days = self.cache.get("preload:last_days")
+
+        if cached_date == date.today().isoformat() and cached_days:
+            return int(cached_days)
+
+        return 0
+
     async def has_todays_cache(self) -> bool:
-        """
-        Verifica se já tem cache de fixtures do dia atual.
-
-        Returns:
-            True se já tiver carga de hoje, False caso contrário
-        """
-        # Verifica se tem pelo menos uma liga cacheada de hoje
-        today = date.today()
-        cache_key = f"preload:last_date"
-
-        last_date = self.cache.get(cache_key)
-
-        if last_date and last_date == today.isoformat():
-            logger.info(f"✅ Cache de hoje ({today}) encontrado")
-            return True
-
-        logger.info(f"❌ Cache de hoje não encontrado (last: {last_date})")
-        return False
+        """Verifica se já tem cache de fixtures do dia atual."""
+        return self._get_cached_period() > 0
 
     async def preload_fixtures(self, league_ids: List[int], days: int = 7):
         """
         Pré-carrega fixtures de múltiplas ligas para o período solicitado.
+        Cache incremental: se já tem 3 dias cacheados e pede 7, carrega só dias 4-7.
+        NÃO carrega odds.
 
         Args:
             league_ids: Lista de IDs das ligas
             days: Número de dias a carregar (3, 7 ou 14)
         """
-        dates = self._get_dates(days)
-        total_days = len(dates)
+        cached_days = self._get_cached_period()
 
-        # Limpa cache de fixtures e odds antigos para forçar re-fetch com season correta
-        self.cache.delete_by_prefix("fixtures:")
-        self.cache.delete_by_prefix("odds:")
-        logger.info("🗑️ Cache de fixtures/odds limpo para re-fetch")
+        # Se já tem cache suficiente para o período pedido, não faz nada
+        if cached_days >= days:
+            logger.info(f"✅ Cache de {cached_days} dias já existe, período de {days} dias coberto")
+            return
 
-        logger.info(f"🚀 Iniciando pré-carregamento de {len(league_ids)} ligas × {total_days} dias...")
-        logger.info(f"📅 Período: {dates[0]} até {dates[-1]} ({total_days} dias)")
-        logger.info(f"📆 Datas carregadas: {[d.isoformat() for d in dates]}")
+        # Calcula datas incrementais (pula as que já estão cacheadas)
+        all_dates = self._get_dates(days)
+        if cached_days > 0:
+            # Já tem cache dos primeiros N dias, pega só o restante
+            dates_to_fetch = all_dates[cached_days:]
+            logger.info(f"📦 Cache incremental: já tem {cached_days} dias, carregando mais {len(dates_to_fetch)} dias")
+        else:
+            # Limpa cache antigo (de outro dia) e carrega tudo
+            self.cache.delete_by_prefix("fixtures:")
+            dates_to_fetch = all_dates
+            logger.info(f"🗑️ Cache limpo (novo dia), carregando {len(dates_to_fetch)} dias")
+
+        logger.info(f"🚀 Pré-carregamento de {len(league_ids)} ligas × {len(dates_to_fetch)} dias...")
+        logger.info(f"📅 Período: {dates_to_fetch[0]} até {dates_to_fetch[-1]}")
 
         total_fixtures = 0
-        total_odds = 0
 
         for league_id in league_ids:
             league_fixtures = 0
             try:
-                for fixture_date in dates:
-                    fixtures_count = await self.preload_league(league_id, fixture_date)
-                    total_fixtures += fixtures_count
-                    total_odds += fixtures_count  # 1 odd por fixture
-                    league_fixtures += fixtures_count
+                for fixture_date in dates_to_fetch:
+                    fixtures = await self.api_service.get_fixtures(league_id, fixture_date)
+                    count = len(fixtures) if fixtures else 0
+                    total_fixtures += count
+                    league_fixtures += count
 
-                logger.info(f"  ✅ Liga {league_id}: {league_fixtures} fixtures carregados")
+                logger.info(f"  ✅ Liga {league_id}: {league_fixtures} fixtures")
             except Exception as e:
                 logger.error(f"  ❌ Erro ao pré-carregar liga {league_id}: {e}")
 
-        # Marca data do pré-carregamento
-        self.cache.set("preload:last_date", date.today().isoformat())
+        # Marca período cacheado (hoje + total de dias)
+        self.cache.set("preload:last_date", date.today().isoformat(), ttl_seconds=86400)
+        self.cache.set("preload:last_days", days, ttl_seconds=86400)
 
-        logger.info(f"✅ Pré-carregamento concluído!")
-        logger.info(f"📊 Total: {total_fixtures} fixtures + {total_odds} odds carregados")
-        logger.info(f"💾 Cache em memória pronto para uso")
-
-
-    async def preload_league(self, league_id: int, fixture_date: date) -> int:
-        """
-        Pré-carrega fixtures de uma liga específica.
-
-        Args:
-            league_id: ID da liga
-            fixture_date: Data dos fixtures
-
-        Returns:
-            Número de fixtures carregados
-        """
-        logger.debug(f"  📥 Buscando fixtures: Liga {league_id} - {fixture_date}")
-
-        # Busca fixtures via APIFootballService (já cacheia automaticamente)
-        fixtures = await self.api_service.get_fixtures(league_id, fixture_date)
-
-        if not fixtures:
-            logger.debug(f"  ⚠️ Nenhum fixture para liga {league_id} em {fixture_date}")
-            return 0
-
-        # Para cada fixture, busca odds (já cacheia automaticamente)
-        for fixture in fixtures:
-            fixture_id = int(fixture["id"])
-            await self.api_service.get_odds(fixture_id)
-
-        logger.debug(f"  💾 {len(fixtures)} fixtures + odds salvos no cache")
-
-        return len(fixtures)
+        logger.info(f"✅ Pré-carregamento concluído! {total_fixtures} fixtures carregados")
 
     async def preload_main_leagues(self, days: int = 7):
         """

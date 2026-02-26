@@ -3,11 +3,9 @@
  */
 import React, { useState } from 'react';
 import { MatchList } from '../components/matches/MatchList';
-import { useMatches } from '../hooks/useMatches';
+import { useMatchesContext } from '../contexts/MatchesContext';
 import { usePrediction } from '../contexts/PredictionContext';
 import { useApp } from '../contexts/AppContext';
-import { useBookmaker } from '../contexts/BookmakerContext';
-import { useTicket } from '../contexts/TicketContext';
 import { showWarning } from '../services/notificationService';
 
 export const MatchesPage: React.FC = () => {
@@ -15,11 +13,9 @@ export const MatchesPage: React.FC = () => {
 
   // Contexts
   const { strategy, selectedLeague, setStrategy, setSelectedLeague, setActiveTab } = useApp();
-  const { bookmakers, selectedBookmaker, setSelectedBookmaker } = useBookmaker();
-  const { ticketBets, clearTicketBets } = useTicket();
 
   // Hooks
-  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod } = useMatches();
+  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, loadingOdds, oddsProgress, updateMatchOddsAndStatus } = useMatchesContext();
   const { analyzing, analyze } = usePrediction();
 
   // Handlers
@@ -41,20 +37,7 @@ export const MatchesPage: React.FC = () => {
 
     const success = await analyze(Array.from(selectedMatches), strategy);
     if (success) {
-
       setActiveTab('predictions');
-    }
-  };
-
-  const handleBookmakerChange = (bookmakerId: string) => {
-    // Ao trocar de casa de apostas, limpa o bilhete se tiver apostas
-    if (ticketBets.length > 0) {
-      if (window.confirm('Trocar de casa de apostas irá limpar seu bilhete atual. Deseja continuar?')) {
-        clearTicketBets();
-        setSelectedBookmaker(bookmakerId);
-      }
-    } else {
-      setSelectedBookmaker(bookmakerId);
     }
   };
 
@@ -70,13 +53,13 @@ export const MatchesPage: React.FC = () => {
       leagues={leagues}
       selectedLeague={selectedLeague}
       onLeagueChange={setSelectedLeague}
-      bookmakers={bookmakers}
-      selectedBookmaker={selectedBookmaker}
-      onBookmakerChange={handleBookmakerChange}
       preloading={preloading}
       selectedPeriod={selectedPeriod}
       dataLoaded={dataLoaded}
       onFetchByPeriod={fetchByPeriod}
+      onOddsRefreshed={updateMatchOddsAndStatus}
+      loadingOdds={loadingOdds}
+      oddsProgress={oddsProgress}
     />
   );
 };

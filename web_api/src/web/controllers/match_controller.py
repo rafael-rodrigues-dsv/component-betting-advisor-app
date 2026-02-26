@@ -3,7 +3,8 @@ Match Controller - Lista de jogos (lê do CACHE)
 """
 
 from fastapi import APIRouter, Query
-from typing import Optional
+from pydantic import BaseModel
+from typing import Optional, List
 from datetime import datetime, date as date_type, timedelta
 import logging
 
@@ -165,4 +166,86 @@ async def get_bookmakers():
     )
 
 
+class OddsBatchRequest(BaseModel):
+    fixture_ids: List[str]
+
+
+@router.post("/matches/odds/batch")
+async def get_odds_batch(request: OddsBatchRequest):
+    """
+    Busca odds de múltiplas partidas de uma vez (cache ou API).
+    Usado após o preload para carregar odds de todos os matches.
+
+    Body: { "fixture_ids": ["123", "456", "789"] }
+    """
+    try:
+        int_ids = [int(fid) for fid in request.fixture_ids]
+        odds_map = await match_service.get_odds_batch(int_ids)
+
+        logger.info(f"📊 Batch odds: {len(odds_map)} fixtures processados")
+
+        return {
+            "success": True,
+            "count": len(odds_map),
+            "odds": odds_map
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro no batch de odds: {e}")
+        return {
+            "success": False,
+            "count": 0,
+            "odds": {},
+            "error": str(e)
+        }
+
+
+@router.get("/matches/{fixture_id}/odds")
+async def get_match_odds(fixture_id: str):
+    """
+    Busca odds de uma partida específica (cache ou API).
+    Retorna apenas bookmakers suportadas.
+    """
+    try:
+        odds = await match_service.get_odds_for_match(int(fixture_id))
+        return {
+            "success": True,
+            "fixture_id": fixture_id,
+            "odds": odds
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar odds do fixture {fixture_id}: {e}")
+        return {
+            "success": False,
+            "fixture_id": fixture_id,
+            "odds": {},
+            "error": str(e)
+        }
+
+
+@router.post("/matches/{fixture_id}/odds/refresh")
+async def refresh_match_odds(fixture_id: str):
+    """
+    Força refresh das odds e status de uma partida.
+    Deleta cache de odds, busca odds e status atualizados da API.
+    """
+    try:
+        odds = await match_service.refresh_odds_for_match(int(fixture_id))
+        live_status = await match_service.get_fixture_live_status(int(fixture_id))
+
+        return {
+            "success": True,
+            "fixture_id": fixture_id,
+            "odds": odds,
+            "status": live_status.get("status", "Not Started"),
+            "status_short": live_status.get("status_short", "NS"),
+            "message": "Odds e status atualizados com sucesso"
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar odds do fixture {fixture_id}: {e}")
+        return {
+            "success": False,
+            "fixture_id": fixture_id,
+            "odds": {},
+            "error": str(e)
+        }
 
