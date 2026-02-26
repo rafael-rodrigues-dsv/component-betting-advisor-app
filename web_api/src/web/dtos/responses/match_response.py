@@ -34,8 +34,8 @@ class BookmakerResponse(BaseModel):
 
 class VenueResponse(BaseModel):
     """Estádio/Local da partida"""
-    name: str
-    city: str
+    name: str = ""
+    city: str = ""
 
 
 class RoundInfoResponse(BaseModel):

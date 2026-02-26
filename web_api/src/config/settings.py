@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     MAIN_LEAGUES: str = "71,73,39,140,78,61,135"
     """IDs das ligas principais (separados por vírgula)"""
 
+    # Casas de apostas suportadas (string simples - será parseada quando necessário)
+    SUPPORTED_BOOKMAKERS: str = "bet365,betano"
+    """IDs das casas de apostas suportadas (separados por vírgula)"""
+
     @property
     def cors_origins_list(self):
         """Retorna CORS_ORIGINS como lista"""
@@ -82,6 +86,11 @@ class Settings(BaseSettings):
     def main_leagues_list(self):
         """Retorna MAIN_LEAGUES como lista de inteiros"""
         return [int(league_id.strip()) for league_id in self.MAIN_LEAGUES.split(',') if league_id.strip()]
+
+    @property
+    def supported_bookmakers_set(self):
+        """Retorna SUPPORTED_BOOKMAKERS como set de strings"""
+        return {b.strip() for b in self.SUPPORTED_BOOKMAKERS.split(',') if b.strip()}
 
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).parent / ".env"),

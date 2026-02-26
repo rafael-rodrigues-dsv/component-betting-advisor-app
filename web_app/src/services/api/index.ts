@@ -1,6 +1,6 @@
 /**
  * API Service Barrel Export
  */
-export { matchesApi, predictionsApi, ticketsApi } from './apiEndpoints';
+export { matchesApi, predictionsApi, ticketsApi, preloadApi } from './apiEndpoints';
 export { apiGet, apiPost, apiDelete, API_BASE } from './apiClient';
 

@@ -5,7 +5,7 @@ Orquestra client + cache + parsers conforme arquitetura.
 """
 
 from datetime import date
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 
 from infrastructure.cache.cache_manager import get_cache
@@ -59,18 +59,26 @@ class APIFootballService:
         # Cache MISS - busca da API
         logger.debug(f"❌ Cache MISS: {cache_key}")
 
-        api_response = await self.client.get("/fixtures", {
+        # Resolve a season correta para essa liga
+        season = await self._get_current_season(league_id)
+
+        params = {
             "league": league_id,
             "date": fixture_date.isoformat()
-        })
+        }
+        if season:
+            params["season"] = season
+
+        api_response = await self.client.get("/fixtures", params)
 
         # Parse
         fixtures = FixtureParser.parse(api_response)
 
-        # Cache (6 horas = 21600 segundos)
-        self.cache.set(cache_key, fixtures, ttl_seconds=21600)
+        # Cache (6 horas) - não cacheia listas vazias para permitir retry
+        if fixtures:
+            self.cache.set(cache_key, fixtures, ttl_seconds=21600)
 
-        logger.info(f"📥 {len(fixtures)} fixtures obtidos da API e cacheados")
+        logger.info(f"📥 {len(fixtures)} fixtures obtidos da API e cacheados (liga={league_id}, season={season})")
         return fixtures
 
     async def get_odds(self, fixture_id: int) -> Dict[str, Any]:
@@ -141,4 +149,51 @@ class APIFootballService:
 
         logger.warning(f"⚠️ Partida {fixture_id} não encontrada (response vazio)")
         return None
+
+    async def _get_current_season(self, league_id: int) -> Optional[int]:
+        """
+        Resolve a season atual de uma liga via API-Football.
+
+        Busca GET /leagues?id={league_id}&current=true e cacheia por 7 dias.
+        Ligas europeias usam o ano de início (ex: 2025 para 2025/2026).
+        Ligas brasileiras usam o ano corrente (ex: 2026).
+
+        Args:
+            league_id: ID da liga
+
+        Returns:
+            Ano da season atual (ex: 2025, 2026) ou None se não encontrar
+        """
+        cache_key = f"season:{league_id}"
+
+        # Cache HIT
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            logger.debug(f"✅ Season cache HIT: liga {league_id} = {cached}")
+            return cached
+
+        # Cache MISS - busca da API
+        try:
+            api_response = await self.client.get("/leagues", {
+                "id": league_id,
+                "current": "true"
+            })
+
+            leagues = api_response.get("response", [])
+            if leagues:
+                seasons = leagues[0].get("seasons", [])
+                for season in seasons:
+                    if season.get("current"):
+                        year = season["year"]
+                        # Cache por 7 dias (604800 segundos)
+                        self.cache.set(cache_key, year, ttl_seconds=604800)
+                        logger.info(f"📅 Season atual da liga {league_id}: {year}")
+                        return year
+
+            logger.warning(f"⚠️ Season não encontrada para liga {league_id}")
+            return None
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar season da liga {league_id}: {e}")
+            return None
 

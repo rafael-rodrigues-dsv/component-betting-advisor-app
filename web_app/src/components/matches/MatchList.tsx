@@ -3,6 +3,7 @@
  */
 import React, { useMemo, useState, useEffect } from 'react';
 import type { Match, League, Bookmaker, Strategy } from '../../types';
+import type { PeriodDays } from '../../hooks/useMatches';
 import { MatchCard } from './MatchCard';
 import { Loading } from '../common/Loading';
 
@@ -10,7 +11,6 @@ interface MatchListProps {
   matches: Match[];
   selectedMatches: Set<string>;
   onSelectMatch: (matchId: string) => void;
-  loading: boolean;
   analyzing: boolean;
   onAnalyze: () => void;
   // Filters
@@ -22,6 +22,11 @@ interface MatchListProps {
   bookmakers: Bookmaker[];
   selectedBookmaker: string;
   onBookmakerChange: (bookmakerId: string) => void;
+  // Period selector
+  preloading: boolean;
+  selectedPeriod: PeriodDays | null;
+  dataLoaded: boolean;
+  onFetchByPeriod: (days: PeriodDays) => void;
 }
 
 // Função auxiliar para formatar data
@@ -68,7 +73,6 @@ export const MatchList: React.FC<MatchListProps> = ({
   matches,
   selectedMatches,
   onSelectMatch,
-  loading,
   analyzing,
   onAnalyze,
   strategy,
@@ -79,16 +83,27 @@ export const MatchList: React.FC<MatchListProps> = ({
   bookmakers,
   selectedBookmaker,
   onBookmakerChange,
+  preloading,
+  selectedPeriod,
+  dataLoaded,
+  onFetchByPeriod,
 }) => {
   // Estado para controlar quais datas estão expandidas (por padrão, todas expandidas)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
-  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Agrupa jogos por data
+  // Filtra jogos por liga selecionada (client-side)
+  const filteredMatches = useMemo(() => {
+    if (!selectedLeague || selectedLeague === 'all') {
+      return matches;
+    }
+    return matches.filter(match => match.league.id === selectedLeague);
+  }, [matches, selectedLeague]);
+
+  // Agrupa jogos filtrados por data
   const matchesByDate = useMemo(() => {
     const grouped: Record<string, Match[]> = {};
 
-    matches.forEach(match => {
+    filteredMatches.forEach(match => {
       // Extrai apenas a data (YYYY-MM-DD) diretamente da string, sem conversão de Date
       // Isso evita problemas com timezone
       const dateKey = match.date.split('T')[0]; // YYYY-MM-DD
@@ -112,16 +127,15 @@ export const MatchList: React.FC<MatchListProps> = ({
     return Object.entries(grouped).sort(([dateA], [dateB]) =>
       dateA.localeCompare(dateB)
     );
-  }, [matches]);
+  }, [filteredMatches]);
 
-  // Inicializa todas as datas como expandidas APENAS na primeira renderização
+  // Inicializa todas as datas como expandidas quando novos dados carregam
   useEffect(() => {
-    if (matchesByDate.length > 0 && !hasInitialized) {
+    if (matchesByDate.length > 0) {
       const allDates = new Set(matchesByDate.map(([date]) => date));
       setExpandedDates(allDates);
-      setHasInitialized(true);
     }
-  }, [matchesByDate, hasInitialized]);
+  }, [dataLoaded, matchesByDate.length]);
 
   // Toggle expand/collapse de uma data
   const toggleDateExpand = (dateKey: string) => {
@@ -148,62 +162,124 @@ export const MatchList: React.FC<MatchListProps> = ({
     }
   };
 
+  const periodOptions: { days: 3 | 7 | 14; label: string; icon: string; description: string }[] = [
+    { days: 3, label: '3 Dias', icon: '⚡', description: 'Jogos próximos' },
+    { days: 7, label: '7 Dias', icon: '📅', description: 'Próxima semana' },
+    { days: 14, label: '14 Dias', icon: '📆', description: 'Duas semanas' },
+  ];
+
   return (
     <>
-      <div className="filters-bar">
-        {/* ...existing filters code... */}
-        <div className="filter-group">
-          <label>🎯 Estratégia:</label>
-          <select value={strategy} onChange={(e) => onStrategyChange(e.target.value as Strategy)}>
-            <option value="BALANCED">⚖️ Balanceada</option>
-            <option value="CONSERVATIVE">🛡️ Conservadora</option>
-            <option value="VALUE_BET">💰 Value Bet</option>
-            <option value="AGGRESSIVE">🔥 Agressiva</option>
-          </select>
+      {/* Period Selector - Sempre visível */}
+      <div className="period-selector">
+        <div className="period-selector-header">
+          <h3>📥 Carregar Jogos</h3>
+          <p>Selecione o período para buscar os jogos disponíveis</p>
         </div>
-        <div className="filter-group">
-          <label>🏆 Campeonato:</label>
-          <select value={selectedLeague} onChange={(e) => onLeagueChange(e.target.value)}>
-            <option value="all">Todos</option>
-            {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+        <div className="period-buttons">
+          {periodOptions.map(({ days, label, icon, description }) => (
+            <button
+              key={days}
+              className={`period-btn ${selectedPeriod === days ? 'active' : ''}`}
+              onClick={() => onFetchByPeriod(days)}
+              disabled={preloading}
+            >
+              <span className="period-btn-icon">{icon}</span>
+              <span className="period-btn-label">{label}</span>
+              <span className="period-btn-desc">{description}</span>
+              {preloading && selectedPeriod === days && (
+                <span className="period-btn-loading">⏳</span>
+              )}
+            </button>
+          ))}
         </div>
-        <div className="filter-group">
-          <label>🎰 Casa:</label>
-          <select value={selectedBookmaker} onChange={(e) => onBookmakerChange(e.target.value)}>
-            {bookmakers.map(b => <option key={b.id} value={b.id}>{b.logo} {b.name}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="actions-bar">
-        <button
-          className="btn btn-primary"
-          disabled={selectedMatches.size === 0 || analyzing}
-          onClick={onAnalyze}
-        >
-          {analyzing ? '⏳ Analisando...' : '🔍 Analisar Selecionados'}
-        </button>
-        {matches.length > 0 && matchesByDate.length > 1 && (
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={toggleAll}
-            title={expandedDates.size === matchesByDate.length ? 'Minimizar Todas' : 'Expandir Todas'}
-          >
-            {expandedDates.size === matchesByDate.length ? '📁 Minimizar Todas' : '📂 Expandir Todas'}
-          </button>
-        )}
-        {selectedMatches.size > 0 && (
-          <span className="selected-count">
-            <strong>{selectedMatches.size} selecionado{selectedMatches.size > 1 ? 's' : ''}</strong>
-          </span>
+        {selectedPeriod && dataLoaded && (
+          <div className="period-info">
+            ✅ Dados carregados para <strong>{selectedPeriod} dias</strong> — {filteredMatches.length} jogos {selectedLeague !== 'all' ? `(de ${matches.length} total)` : 'encontrados'}
+          </div>
         )}
       </div>
 
-      {loading ? (
-        <Loading message="Carregando jogos..." />
-      ) : matches.length === 0 ? (
-        <div className="empty-state"><h3>Nenhum jogo disponível</h3></div>
+      {/* Filters & Content - Só aparecem depois de carregar dados */}
+      {dataLoaded && (
+        <>
+          <div className="filters-bar">
+            <div className="filter-group">
+              <label>🎯 Estratégia:</label>
+              <select value={strategy} onChange={(e) => onStrategyChange(e.target.value as Strategy)}>
+                <option value="BALANCED">⚖️ Balanceada</option>
+                <option value="CONSERVATIVE">🛡️ Conservadora</option>
+                <option value="VALUE_BET">💰 Value Bet</option>
+                <option value="AGGRESSIVE">🔥 Agressiva</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>🏆 Campeonato:</label>
+              <select value={selectedLeague} onChange={(e) => onLeagueChange(e.target.value)}>
+                <option value="all">Todos</option>
+                {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Bookmaker Tabs */}
+          <div className="bookmaker-tabs">
+            <div className="bookmaker-tabs-header">
+              <span className="bookmaker-tabs-title">🎰 Casa de Apostas</span>
+            </div>
+            <div className="bookmaker-tabs-list">
+              {bookmakers.map(b => (
+                <button
+                  key={b.id}
+                  className={`bookmaker-tab ${selectedBookmaker === b.id ? 'active' : ''}`}
+                  onClick={() => onBookmakerChange(b.id)}
+                >
+                  <span className="bookmaker-tab-logo">{b.logo}</span>
+                  <span className="bookmaker-tab-name">{b.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="actions-bar">
+            <button
+              className="btn btn-primary"
+              disabled={selectedMatches.size === 0 || analyzing}
+              onClick={onAnalyze}
+            >
+              {analyzing ? '⏳ Analisando...' : '🔍 Analisar Selecionados'}
+            </button>
+            {matches.length > 0 && matchesByDate.length > 1 && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={toggleAll}
+                title={expandedDates.size === matchesByDate.length ? 'Minimizar Todas' : 'Expandir Todas'}
+              >
+                {expandedDates.size === matchesByDate.length ? '📁 Minimizar Todas' : '📂 Expandir Todas'}
+              </button>
+            )}
+            {selectedMatches.size > 0 && (
+              <span className="selected-count">
+                <strong>{selectedMatches.size} selecionado{selectedMatches.size > 1 ? 's' : ''}</strong>
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {preloading ? (
+        <Loading message="Carregando jogos do período selecionado..." />
+      ) : !dataLoaded ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🏟️</div>
+          <h3>Selecione um período acima para carregar os jogos</h3>
+          <p>Escolha entre 3, 7 ou 14 dias para buscar as partidas disponíveis</p>
+        </div>
+      ) : filteredMatches.length === 0 ? (
+        <div className="empty-state">
+          <h3>Nenhum jogo disponível para o período selecionado</h3>
+          <p>Tente selecionar um período maior ou outro campeonato</p>
+        </div>
       ) : (
         <div className="matches-container">
           {matchesByDate.map(([date, dateMatches]) => (
@@ -220,7 +296,7 @@ export const MatchList: React.FC<MatchListProps> = ({
                 <div className="matches-grid">
                   {dateMatches.map((match) => (
                     <MatchCard
-                      key={match.id}
+                      key={`${match.id}-${selectedBookmaker}`}
                       match={match}
                       isSelected={selectedMatches.has(match.id)}
                       onSelect={onSelectMatch}

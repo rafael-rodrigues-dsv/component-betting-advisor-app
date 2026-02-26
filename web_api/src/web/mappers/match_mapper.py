@@ -28,54 +28,54 @@ class MatchMapper:
             MatchResponse tipado
         """
         # Mapeia league
-        league_data = match_data.get("league", {})
+        league_data = match_data.get("league") or {}
         league = LeagueResponse(
-            id=str(league_data.get("id", "")),
-            name=league_data.get("name", ""),
-            country=league_data.get("country", ""),
-            logo=league_data.get("logo", ""),
-            type=league_data.get("type", "league")
+            id=str(league_data.get("id") or ""),
+            name=league_data.get("name") or "",
+            country=league_data.get("country") or "",
+            logo=league_data.get("logo") or "",
+            type=league_data.get("type") or "league"
         )
 
         # Mapeia home_team
-        home_team_data = match_data.get("home_team", {})
-        home_team_logo_data = home_team_data.get("logo", {})
+        home_team_data = match_data.get("home_team") or {}
+        home_team_logo_data = home_team_data.get("logo") or {}
         home_team = TeamResponse(
-            id=str(home_team_data.get("id", "")),
-            name=home_team_data.get("name", ""),
+            id=str(home_team_data.get("id") or ""),
+            name=home_team_data.get("name") or "",
             logo=LogoDTO(
-                url=home_team_logo_data.get("url", ""),
-                type=home_team_logo_data.get("type", "LOCAL")
+                url=home_team_logo_data.get("url") or "",
+                type=home_team_logo_data.get("type") or "LOCAL"
             ),
-            country=home_team_data.get("country", "Brazil")
+            country=home_team_data.get("country") or "Brazil"
         )
 
         # Mapeia away_team
-        away_team_data = match_data.get("away_team", {})
-        away_team_logo_data = away_team_data.get("logo", {})
+        away_team_data = match_data.get("away_team") or {}
+        away_team_logo_data = away_team_data.get("logo") or {}
         away_team = TeamResponse(
-            id=str(away_team_data.get("id", "")),
-            name=away_team_data.get("name", ""),
+            id=str(away_team_data.get("id") or ""),
+            name=away_team_data.get("name") or "",
             logo=LogoDTO(
-                url=away_team_logo_data.get("url", ""),
-                type=away_team_logo_data.get("type", "LOCAL")
+                url=away_team_logo_data.get("url") or "",
+                type=away_team_logo_data.get("type") or "LOCAL"
             ),
-            country=away_team_data.get("country", "Brazil")
+            country=away_team_data.get("country") or "Brazil"
         )
 
         # Mapeia round
-        round_data = match_data.get("round", {})
+        round_data = match_data.get("round") or {}
         round_info = RoundInfoResponse(
-            type=round_data.get("type", "round"),
+            type=round_data.get("type") or "round",
             number=round_data.get("number"),
-            name=round_data.get("name", "")
+            name=round_data.get("name") or ""
         )
 
         # Mapeia venue
-        venue_data = match_data.get("venue", {})
+        venue_data = match_data.get("venue") or {}
         venue = VenueResponse(
-            name=venue_data.get("name", ""),
-            city=venue_data.get("city", "")
+            name=venue_data.get("name") or "",
+            city=venue_data.get("city") or ""
         )
 
         # Mapeia odds (dicionário de bookmakers)
@@ -95,13 +95,13 @@ class MatchMapper:
                 )
 
         return MatchResponse(
-            id=str(match_data.get("id", "")),
+            id=str(match_data.get("id") or ""),
             league=league,
             home_team=home_team,
             away_team=away_team,
-            date=match_data.get("date", ""),
-            timestamp=match_data.get("timestamp", ""),
-            status=match_data.get("status", "Not Started"),
+            date=match_data.get("date") or "",
+            timestamp=match_data.get("timestamp") or "",
+            status=match_data.get("status") or "Not Started",
             round=round_info,
             venue=venue,
             odds=odds_mapped

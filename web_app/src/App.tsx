@@ -12,14 +12,12 @@ import { PredictionProvider, usePrediction } from './contexts/PredictionContext'
 // Components
 import { Header } from './components/common/Header';
 import { Sidebar } from './components/common/Sidebar';
-import { PreloadStatus } from './components/common/PreloadStatus';
 
 // Pages
 import { DashboardPage, MatchesPage, PredictionsPage, TicketsPage } from './pages';
 
 // Hooks
 import { useTicket } from './contexts/TicketContext';
-import { useMatches } from './hooks/useMatches';
 
 // Styles
 import './styles/globals.css';
@@ -28,12 +26,11 @@ const AppContent: React.FC = () => {
   const { activeTab, setActiveTab } = useApp();
   const { predictions } = usePrediction();
   const { ticketBets } = useTicket();
-  const { matches } = useMatches('all');
 
   return (
     <div className="app">
       <Header
-        matchesCount={matches.length}
+        matchesCount={0}
         selectedCount={0}
         ticketBetsCount={ticketBets.length}
       />
@@ -55,9 +52,6 @@ const AppContent: React.FC = () => {
 
       {/* Tickets */}
       {activeTab === 'tickets' && <TicketsPage />}
-
-      {/* Preload Status Notification */}
-      <PreloadStatus />
     </div>
   );
 };

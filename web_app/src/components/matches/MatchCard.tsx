@@ -38,12 +38,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, isSelected, onSelec
   const homeLogoUrl = getTeamLogoUrl(match.home_team.logo);
   const awayLogoUrl = getTeamLogoUrl(match.away_team.logo);
 
-  // Pega as odds da casa de apostas selecionada (fallback para bet365)
-  const bookmakerOdds = match.odds[selectedBookmaker] || match.odds['bet365'] || {
-    home: 0,
-    draw: 0,
-    away: 0
-  };
+  // Chaves de bookmakers disponíveis nas odds deste jogo
+  const availableBookmakers = Object.keys(match.odds || {});
+
+  // Pega as odds da casa de apostas selecionada (fallback para bet365, depois primeira disponível)
+  const bookmakerOdds = match.odds[selectedBookmaker]
+    || match.odds['bet365']
+    || (availableBookmakers.length > 0 ? match.odds[availableBookmakers[0]] : null)
+    || { home: 0, draw: 0, away: 0 };
+
+  // Nome da casa que está sendo exibida
+  const displayedBookmaker = match.odds[selectedBookmaker]
+    ? selectedBookmaker
+    : match.odds['bet365']
+      ? 'bet365'
+      : availableBookmakers[0] || 'N/A';
 
   return (
     <div
@@ -84,9 +93,17 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, isSelected, onSelec
       </div>
       {match.venue && <div className="match-venue">🏟️ {match.venue.name}</div>}
       <div className="match-odds">
-        <div className="odd-item"><div className="odd-label">Casa</div><div className="odd-value">{bookmakerOdds.home}</div></div>
-        <div className="odd-item"><div className="odd-label">Empate</div><div className="odd-value">{bookmakerOdds.draw}</div></div>
-        <div className="odd-item"><div className="odd-label">Fora</div><div className="odd-value">{bookmakerOdds.away}</div></div>
+        <div className="odds-bookmaker-label">
+          {displayedBookmaker === selectedBookmaker
+            ? `🎰 ${selectedBookmaker}`
+            : `⚠️ ${displayedBookmaker} (${selectedBookmaker} indisponível)`
+          }
+        </div>
+        <div className="odds-values">
+          <div className="odd-item"><div className="odd-label">Casa</div><div className="odd-value">{bookmakerOdds.home}</div></div>
+          <div className="odd-item"><div className="odd-label">Empate</div><div className="odd-value">{bookmakerOdds.draw}</div></div>
+          <div className="odd-item"><div className="odd-label">Fora</div><div className="odd-value">{bookmakerOdds.away}</div></div>
+        </div>
       </div>
     </div>
   );

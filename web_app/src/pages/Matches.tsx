@@ -19,7 +19,7 @@ export const MatchesPage: React.FC = () => {
   const { ticketBets, clearTicketBets } = useTicket();
 
   // Hooks
-  const { matches, leagues, loading } = useMatches(selectedLeague);
+  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod } = useMatches();
   const { analyzing, analyze } = usePrediction();
 
   // Handlers
@@ -63,7 +63,6 @@ export const MatchesPage: React.FC = () => {
       matches={matches}
       selectedMatches={selectedMatches}
       onSelectMatch={toggleMatchSelection}
-      loading={loading}
       analyzing={analyzing}
       onAnalyze={handleAnalyze}
       strategy={strategy}
@@ -74,6 +73,10 @@ export const MatchesPage: React.FC = () => {
       bookmakers={bookmakers}
       selectedBookmaker={selectedBookmaker}
       onBookmakerChange={handleBookmakerChange}
+      preloading={preloading}
+      selectedPeriod={selectedPeriod}
+      dataLoaded={dataLoaded}
+      onFetchByPeriod={fetchByPeriod}
     />
   );
 };

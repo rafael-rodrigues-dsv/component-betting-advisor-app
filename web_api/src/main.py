@@ -97,23 +97,9 @@ async def startup_event():
         import traceback
         logger.error(traceback.format_exc())
 
-    # 3. Pré-carrega fixtures
-    try:
-        from application.services.preload_service import PreloadService
-
-        preload = PreloadService()
-
-        # Verifica se já tem cache de hoje
-        if await preload.has_todays_cache():
-            logger.info("✅ Cache do dia já existe. Pré-carregamento ignorado.")
-        else:
-            logger.info("📥 Pré-carregando ligas principais...")
-            await preload.preload_main_leagues()
-            logger.info("✅ Pré-carregamento concluído!")
-
-    except Exception as e:
-        logger.error(f"❌ Erro no pré-carregamento: {e}")
-        logger.warning("⚠️ Sistema iniciará sem pré-carga (modo fallback)")
+    # 3. Pré-carregamento DESATIVADO no startup
+    # O usuário agora controla quando carregar dados via tela de filtro por período (3, 7 ou 14 dias)
+    logger.info("ℹ️ Pré-carregamento automático desativado. Use POST /api/v1/preload/fetch para carregar dados.")
 
     logger.info("✅ Betting Advisor API pronta!")
 

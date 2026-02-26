@@ -2,6 +2,7 @@
 Fixture Parser - Parseia response da API-Football /fixtures
 """
 
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 import logging
 
@@ -45,35 +46,46 @@ class FixtureParser:
         away_logo = FixtureParser._map_logo(teams_data.get("away", {}).get("name", ""),
                                            teams_data.get("away", {}).get("logo", ""))
 
+        # Timestamp: API retorna Unix timestamp (int), converte para YYYY-MM-DD
+        raw_timestamp = fixture_data.get("timestamp")
+        if isinstance(raw_timestamp, int):
+            timestamp_str = datetime.fromtimestamp(raw_timestamp, tz=timezone.utc).strftime("%Y-%m-%d")
+        elif isinstance(raw_timestamp, str):
+            timestamp_str = raw_timestamp[:10]  # Pega só YYYY-MM-DD
+        else:
+            # Fallback: extrai da date
+            date_str = fixture_data.get("date", "")
+            timestamp_str = date_str[:10] if date_str else ""
+
         return {
-            "id": str(fixture_data.get("id", "")),
-            "date": fixture_data.get("date", ""),
-            "timestamp": fixture_data.get("timestamp"),
-            "status": fixture_data.get("status", {}).get("long", "Not Started"),
+            "id": str(fixture_data.get("id") or ""),
+            "date": fixture_data.get("date") or "",
+            "timestamp": timestamp_str,
+            "status": (fixture_data.get("status") or {}).get("long") or "Not Started",
             "league": {
-                "id": str(league_data.get("id", "")),
-                "name": league_data.get("name", ""),
-                "country": league_data.get("country", ""),
-                "logo": league_data.get("logo", ""),
-                "type": "league"  # Frontend espera 'league' ou 'cup'
+                "id": str(league_data.get("id") or ""),
+                "name": league_data.get("name") or "",
+                "country": league_data.get("country") or "",
+                "logo": league_data.get("logo") or "",
+                "type": "league"
             },
             "home_team": {
-                "id": str(teams_data.get("home", {}).get("id", "")),
-                "name": teams_data.get("home", {}).get("name", ""),
+                "id": str((teams_data.get("home") or {}).get("id") or ""),
+                "name": (teams_data.get("home") or {}).get("name") or "",
                 "logo": home_logo
             },
             "away_team": {
-                "id": str(teams_data.get("away", {}).get("id", "")),
-                "name": teams_data.get("away", {}).get("name", ""),
+                "id": str((teams_data.get("away") or {}).get("id") or ""),
+                "name": (teams_data.get("away") or {}).get("name") or "",
                 "logo": away_logo
             },
             "round": {
                 "type": "round",
-                "name": league_data.get("round", "")
+                "name": league_data.get("round") or ""
             },
             "venue": {
-                "name": fixture_data.get("venue", {}).get("name", ""),
-                "city": fixture_data.get("venue", {}).get("city", "")
+                "name": (fixture_data.get("venue") or {}).get("name") or "",
+                "city": (fixture_data.get("venue") or {}).get("city") or ""
             }
         }
 

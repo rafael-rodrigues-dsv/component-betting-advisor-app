@@ -1,7 +1,8 @@
 """
 Preload Service - Pré-carregamento de fixtures das ligas principais.
 
-Executado automaticamente no startup do FastAPI (1x por dia).
+Executado sob demanda via POST /api/v1/preload/fetch?days=N.
+O usuário escolhe o período (3, 7 ou 14 dias) na interface.
 
 ATUALIZADO: Usa APIFootballService conforme arquitetura.
 """
@@ -33,33 +34,18 @@ class PreloadService:
         self.api_service = APIFootballService()
         self.last_preload_date = None
 
-    def _get_week_dates(self) -> List[date]:
+    def _get_dates(self, days: int = 7) -> List[date]:
         """
-        Retorna lista de datas desde hoje até o próximo domingo (mínimo 7 dias).
+        Retorna lista de datas desde hoje até 'days' dias à frente.
 
-        Se hoje é domingo, vai até o próximo domingo.
+        Args:
+            days: Número de dias a carregar (3, 7 ou 14)
 
         Returns:
-            Lista de dates (hoje + próximos dias até domingo)
+            Lista de dates (hoje + próximos dias)
         """
         today = date.today()
-        dates = [today]
-
-        # Adiciona dias até completar pelo menos 1 semana OU até domingo
-        current = today
-        days_added = 0
-        max_days = 7  # Garante pelo menos 1 semana
-
-        while days_added < max_days or current.weekday() != 6:  # 6 = Domingo
-            current += timedelta(days=1)
-            dates.append(current)
-            days_added += 1
-
-            # Limite de segurança (máximo 14 dias)
-            if days_added >= 14:
-                break
-
-        return dates
+        return [today + timedelta(days=i) for i in range(days)]
 
     async def has_todays_cache(self) -> bool:
         """
@@ -81,21 +67,21 @@ class PreloadService:
         logger.info(f"❌ Cache de hoje não encontrado (last: {last_date})")
         return False
 
-    async def preload_fixtures(self, league_ids: List[int]):
+    async def preload_fixtures(self, league_ids: List[int], days: int = 7):
         """
-        Pré-carrega fixtures de múltiplas ligas para a semana completa.
-
-        PRO PLAN: Carrega hoje até domingo (até 7 dias).
-
-        Distribuição realista:
-        - Ligas nacionais: Sábado, Domingo e Segunda
-        - Copa do Brasil: Quarta e Quinta
+        Pré-carrega fixtures de múltiplas ligas para o período solicitado.
 
         Args:
             league_ids: Lista de IDs das ligas
+            days: Número de dias a carregar (3, 7 ou 14)
         """
-        dates = self._get_week_dates()
+        dates = self._get_dates(days)
         total_days = len(dates)
+
+        # Limpa cache de fixtures e odds antigos para forçar re-fetch com season correta
+        self.cache.delete_by_prefix("fixtures:")
+        self.cache.delete_by_prefix("odds:")
+        logger.info("🗑️ Cache de fixtures/odds limpo para re-fetch")
 
         logger.info(f"🚀 Iniciando pré-carregamento de {len(league_ids)} ligas × {total_days} dias...")
         logger.info(f"📅 Período: {dates[0]} até {dates[-1]} ({total_days} dias)")
@@ -155,13 +141,14 @@ class PreloadService:
 
         return len(fixtures)
 
-    async def preload_main_leagues(self):
+    async def preload_main_leagues(self, days: int = 7):
         """
         Pré-carrega as ligas principais configuradas.
 
-        Atalho para pré-carregar MAIN_LEAGUES.
+        Args:
+            days: Número de dias a carregar (3, 7 ou 14)
         """
-        await self.preload_fixtures(MAIN_LEAGUES)
+        await self.preload_fixtures(MAIN_LEAGUES, days)
 
 
 

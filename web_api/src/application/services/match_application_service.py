@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any
 import logging
 
 from infrastructure.cache.cache_manager import get_cache
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,10 @@ class MatchService:
 
             # Busca odds do cache
             odds_cache_key = f"odds:{fixture_id}"
-            odds = self.cache.get(odds_cache_key)
+            raw_odds = self.cache.get(odds_cache_key)
+
+            # Filtra apenas bookmakers suportadas
+            odds = {k: v for k, v in (raw_odds or {}).items() if k in settings.supported_bookmakers_set}
 
             # Adiciona odds ao fixture
             match = {
@@ -100,7 +104,10 @@ class MatchService:
         """
         # Busca odds do cache
         odds_cache_key = f"odds:{fixture_id}"
-        odds = self.cache.get(odds_cache_key)
+        raw_odds = self.cache.get(odds_cache_key)
+
+        # Filtra apenas bookmakers suportadas
+        odds = {k: v for k, v in (raw_odds or {}).items() if k in settings.supported_bookmakers_set}
 
         # Tenta buscar fixture de todas as ligas e próximos dias até encontrar
         # (fixtures são cacheados por liga+data, não individualmente)
@@ -207,25 +214,46 @@ class MatchService:
             }
         ]
 
+
+    # Metadados das casas de apostas (logo, nome, etc.)
+    BOOKMAKER_META = {
+        "bet365":      {"name": "Bet365",      "logo": "🟢"},
+        "betano":      {"name": "Betano",      "logo": "🟡"},
+        "1xbet":       {"name": "1xBet",       "logo": "🔵"},
+        "williamhill": {"name": "William Hill", "logo": "🏴"},
+        "unibet":      {"name": "Unibet",      "logo": "🟣"},
+        "betfair":     {"name": "Betfair",     "logo": "🟠"},
+        "pinnacle":    {"name": "Pinnacle",    "logo": "📊"},
+        "marathonbet": {"name": "Marathonbet", "logo": "🏃"},
+        "888sport":    {"name": "888sport",    "logo": "🎱"},
+        "10bet":       {"name": "10Bet",       "logo": "🔟"},
+        "188bet":      {"name": "188bet",      "logo": "💎"},
+        "sbo":         {"name": "SBO",         "logo": "⚡"},
+    }
+
     def get_bookmakers(self) -> List[Dict[str, Any]]:
         """
         Retorna lista de casas de apostas disponíveis.
 
+        Lê SUPPORTED_BOOKMAKERS do settings e monta a lista
+        com metadados (nome, logo). A primeira da lista é o padrão.
+
         Returns:
             Lista de bookmakers
         """
-        return [
-            {
-                "id": "bet365",
-                "name": "Bet365",
-                "logo": "💰",
-                "is_default": True
-            },
-            {
-                "id": "betano",
-                "name": "Betano",
-                "logo": "💰",
-                "is_default": False
-            }
-        ]
+        supported = list(settings.supported_bookmakers_set)
+        # Ordena para manter consistência (primeiro da config = default)
+        config_order = [b.strip() for b in settings.SUPPORTED_BOOKMAKERS.split(',') if b.strip()]
+
+        result = []
+        for i, bk_id in enumerate(config_order):
+            if bk_id in settings.supported_bookmakers_set:
+                meta = self.BOOKMAKER_META.get(bk_id, {"name": bk_id, "logo": "🎰"})
+                result.append({
+                    "id": bk_id,
+                    "name": meta["name"],
+                    "logo": meta["logo"],
+                    "is_default": i == 0,
+                })
+        return result
 

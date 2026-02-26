@@ -167,6 +167,30 @@ class SQLiteCacheManager:
 
         logger.info("🗑️ Cache limpo completamente")
 
+    def delete_by_prefix(self, prefix: str) -> int:
+        """
+        Remove todas as chaves que começam com o prefixo.
+
+        Args:
+            prefix: Prefixo das chaves a remover (ex: 'fixtures:')
+
+        Returns:
+            Número de entradas removidas
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM cache WHERE key LIKE ?", (f"{prefix}%",))
+
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        if deleted > 0:
+            logger.info(f"🗑️ {deleted} entradas removidas com prefixo '{prefix}'")
+
+        return deleted
+
     def clear_expired(self) -> int:
         """
         Remove entradas expiradas.

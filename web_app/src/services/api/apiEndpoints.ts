@@ -68,6 +68,32 @@ export const predictionsApi = {
 };
 
 // ============================================
+// PRELOAD
+// ============================================
+interface PreloadFetchResponse {
+  success: boolean;
+  message: string;
+  days?: number;
+  date_from?: string;
+  date_to?: string;
+}
+
+interface PreloadStatusResponse {
+  hasCache: boolean;
+  leagues: string[];
+  timestamp: string;
+  cacheValid: boolean;
+}
+
+export const preloadApi = {
+  fetch: (days: number) =>
+    apiPost<PreloadFetchResponse>(`/preload/fetch?days=${days}`, {}),
+
+  getStatus: () =>
+    apiGet<PreloadStatusResponse>('/preload/status'),
+};
+
+// ============================================
 // TICKETS
 // ============================================
 interface TicketsResponse {

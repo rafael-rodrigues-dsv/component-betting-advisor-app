@@ -519,9 +519,23 @@ body {
 
 .match-odds {
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.odds-bookmaker-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: capitalize;
+  text-align: center;
+}
+
+.odds-values {
+  display: flex;
+  justify-content: space-around;
   gap: 12px;
 }
 
@@ -1199,6 +1213,174 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Period Selector */
+.period-selector {
+  padding: 24px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.period-selector-header {
+  margin-bottom: 20px;
+}
+
+.period-selector-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.period-selector-header p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.period-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.period-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.period-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+}
+
+.period-btn.active {
+  border-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.period-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.period-btn-icon {
+  font-size: 28px;
+}
+
+.period-btn-label {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.period-btn-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.period-btn-loading {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.period-info {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 10px;
+  color: var(--success);
+  font-size: 14px;
+  text-align: center;
+}
+
+.period-info strong {
+  color: var(--text-primary);
+}
+
+/* Bookmaker Tabs */
+.bookmaker-tabs {
+  margin-bottom: 24px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.bookmaker-tabs-header {
+  padding: 16px 24px 0;
+}
+
+.bookmaker-tabs-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.bookmaker-tabs-list {
+  display: flex;
+  gap: 0;
+  padding: 12px 16px 0;
+  overflow-x: auto;
+}
+
+.bookmaker-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.bookmaker-tab:hover {
+  color: var(--text-primary);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.bookmaker-tab.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.bookmaker-tab-logo {
+  font-size: 20px;
+}
+
+.bookmaker-tab-name {
+  font-size: 15px;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -1206,10 +1388,20 @@ body {
   color: var(--text-secondary);
 }
 
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
 .empty-state h3 {
   margin-bottom: 12px;
   color: var(--text-primary);
   font-size: 20px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 /* Scrollbar */

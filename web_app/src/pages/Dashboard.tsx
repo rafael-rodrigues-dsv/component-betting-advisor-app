@@ -11,7 +11,7 @@ import { ticketsApi } from '../services/api';
 
 export const DashboardPage: React.FC = () => {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const { matches } = useMatches('all');
+  const { matches } = useMatches();
   const { predictions } = usePrediction();
   const { tickets, refreshTickets } = useTicket();
 
