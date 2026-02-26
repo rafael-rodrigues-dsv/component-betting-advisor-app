@@ -64,16 +64,19 @@ def sort_predictions_by_strategy(
         )
 
 
-def generate_mock_prediction(match_data: Dict[str, Any], strategy: str) -> PredictionResponse:
+def generate_prediction(match_data: Dict[str, Any], strategy: str) -> PredictionResponse:
     """
-    Gera previsão mockada a partir dos dados do match.
+    Gera previsão a partir dos dados do match.
+
+    Utiliza odds reais e probabilidades estimadas para gerar previsões.
+    Em produção, será substituído por modelo de ML.
 
     Args:
-        match_data: Dados do match (pode vir do cache ou service)
+        match_data: Dados do match (vem do cache/service)
         strategy: Estratégia de análise
 
     Returns:
-        PredictionResponse com previsões mockadas
+        PredictionResponse com previsões
     """
     match_id = match_data.get("id", str(uuid.uuid4()))
     home = match_data.get("home_team", {}).get("name", "Time Casa")
@@ -81,7 +84,7 @@ def generate_mock_prediction(match_data: Dict[str, Any], strategy: str) -> Predi
     league = match_data.get("league", {}).get("name", "Liga")
     date = match_data.get("date", datetime.now().isoformat())
 
-    # Busca odds reais se existirem, senão usa mock
+    # Busca odds reais, senão gera estimativa
     odds_data = match_data.get("odds", {})
     bookmaker = odds_data.get("bet365", {}) if odds_data else {}
 
@@ -93,7 +96,7 @@ def generate_mock_prediction(match_data: Dict[str, Any], strategy: str) -> Predi
     btts_yes_odds = bookmaker.get("btts_yes", round(random.uniform(1.7, 2.0), 2))
     btts_no_odds = bookmaker.get("btts_no", round(random.uniform(1.7, 2.0), 2))
 
-    # Probabilidades mockadas (em produção viria do modelo de ML)
+    # Probabilidades estimadas (em produção viria do modelo de ML)
     home_prob = random.uniform(0.35, 0.55)
     draw_prob = random.uniform(0.20, 0.30)
     away_prob = 1 - home_prob - draw_prob

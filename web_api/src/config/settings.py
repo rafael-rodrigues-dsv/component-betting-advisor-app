@@ -16,24 +16,15 @@ class Settings(BaseSettings):
 
     Carrega automaticamente de .env se existir, caso contrário usa valores padrão.
 
-    PADRÕES:
-    - API_FOOTBALL_MODE: "mock" (development - virtualizado, sem API key)
-    - DEBUG: False
-    - PORT: 8000
+    OBRIGATÓRIO:
+    - API_FOOTBALL_KEY: Chave da API-Football
 
     Para produção: copie .env.production e adicione API key real
-    Para desenvolvimento: copie .env.development (já é o padrão)
     """
 
     # API-Football
     API_FOOTBALL_KEY: Optional[str] = None
-    """Chave da API-Football (obrigatória para modo 'real')"""
-
-    API_FOOTBALL_MODE: str = "mock"
-    """
-    Modo de operação: 'mock' (virtualizado) ou 'http' (API real)
-    PADRÃO: 'mock' (development - sem API key necessária)
-    """
+    """Chave da API-Football (obrigatória)"""
 
     API_FOOTBALL_BASE_URL: str = "https://v3.football.api-sports.io"
     """URL base da API-Football"""

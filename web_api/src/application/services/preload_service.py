@@ -22,10 +22,8 @@ class PreloadService:
     """
     Serviço de pré-carregamento de dados.
 
-    Busca fixtures das ligas principais ao iniciar o backend,
-    apenas se não houver carga do dia atual.
-
-    Dados mockados mas realistas são gerados e cacheados em memória.
+    Busca fixtures e odds das ligas principais via API-Football
+    e cacheia para uso rápido pelo frontend.
     """
 
 
@@ -94,7 +92,6 @@ class PreloadService:
             league_fixtures = 0
             try:
                 for fixture_date in dates:
-                    # Sempre tenta gerar - scenarios.py verifica match_days do JSON
                     fixtures_count = await self.preload_league(league_id, fixture_date)
                     total_fixtures += fixtures_count
                     total_odds += fixtures_count  # 1 odd por fixture

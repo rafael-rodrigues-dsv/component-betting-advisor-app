@@ -13,7 +13,7 @@ from web.dtos.responses.prediction_response import (
     PredictionDetailResponse
 )
 from web.mappers.prediction_mapper import (
-    generate_mock_prediction,
+    generate_prediction,
     create_pre_ticket
 )
 
@@ -43,7 +43,7 @@ async def analyze_matches(request: AnalyzeMatchesRequest):
             match_data = {"id": match_id}
 
         # Gera previsão usando mapper
-        prediction = generate_mock_prediction(match_data, request.strategy.value)
+        prediction = generate_prediction(match_data, request.strategy.value)
         results.append(prediction)
 
     print(f"[DEBUG] Geradas {len(results)} previsões")
@@ -68,7 +68,7 @@ async def get_predictions(limit: int = 10):
     predictions = []
     for _ in range(limit):
         match_data = {"id": str(uuid.uuid4())}
-        prediction = generate_mock_prediction(match_data, "BALANCED")
+        prediction = generate_prediction(match_data, "BALANCED")
         predictions.append(prediction)
 
     return {"success": True, "count": len(predictions), "predictions": predictions}
@@ -78,6 +78,6 @@ async def get_predictions(limit: int = 10):
 async def get_prediction(prediction_id: str) -> PredictionDetailResponse:
     """Detalhes de uma previsão"""
     match_data = {"id": str(uuid.uuid4())}
-    pred = generate_mock_prediction(match_data, "BALANCED")
+    pred = generate_prediction(match_data, "BALANCED")
     return PredictionDetailResponse(success=True, prediction=pred)
 

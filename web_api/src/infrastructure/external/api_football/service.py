@@ -28,9 +28,8 @@ class APIFootballService:
     """
 
     def __init__(self):
-        # Inicializa client com configurações
+        # Inicializa client HTTP com configurações
         self.client = APIFootballClient(
-            mode=settings.API_FOOTBALL_MODE,
             api_key=settings.API_FOOTBALL_KEY,
             base_url=settings.API_FOOTBALL_BASE_URL
         )

@@ -35,16 +35,6 @@ LEAGUE_COUNTRIES = {
     LEAGUE_SERIE_A: "Italy"
 }
 
-# Mapeamento ID → Arquivo de fixtures
-LEAGUE_FIXTURE_FILES = {
-    LEAGUE_BRASILEIRAO: "brasileirao.json",
-    LEAGUE_COPA_BRASIL: "copa_brasil.json",
-    LEAGUE_PREMIER_LEAGUE: "premier_league.json",
-    LEAGUE_LA_LIGA: "la_liga.json",
-    LEAGUE_BUNDESLIGA: "bundesliga.json",
-    LEAGUE_LIGUE_1: "ligue_1.json",
-    LEAGUE_SERIE_A: "serie_a.json"
-}
 
 # Lista de ligas principais
 MAIN_LEAGUES = [

@@ -14,7 +14,7 @@ from domain.enums.ticket_status_enum import TicketStatus
 from domain.enums.market_type_enum import MarketType
 from infrastructure.database.repositories.ticket_repository import TicketRepository
 from infrastructure.external.api_football.service import APIFootballService
-from infrastructure.external.api_football.results_mock import FixtureResultsMock
+from domain.services.bet_result_service import BetResultService
 from web.mappers.ticket_mapper import map_market_dto_to_domain
 
 logger = logging.getLogger(__name__)
@@ -181,11 +181,11 @@ class TicketApplicationService:
 
         return ticket
 
-    def simulate_ticket_with_api_mock(self, ticket_id: str) -> Ticket:
+    def simulate_ticket_with_api(self, ticket_id: str) -> Ticket:
         """
         Simula resultado de um ticket consultando a API Football.
 
-        Consulta resultados das partidas via APIFootballService (que pode ser mock ou HTTP)
+        Consulta resultados das partidas via APIFootballService
         e determina automaticamente se cada aposta ganhou ou perdeu baseado no placar.
 
         Args:
@@ -212,7 +212,7 @@ class TicketApplicationService:
                     continue
 
                 # Determina se a aposta ganhou/perdeu baseado no placar
-                bet.result = FixtureResultsMock.determine_bet_result(
+                bet.result = BetResultService.determine_bet_result(
                     fixture_result,
                     bet.market.value,
                     bet.predicted_outcome
@@ -223,7 +223,7 @@ class TicketApplicationService:
                     home_goals = fixture_result.get("goals", {}).get("home")
                     away_goals = fixture_result.get("goals", {}).get("away")
                     if home_goals is not None and away_goals is not None:
-                        bet.final_score = FixtureResultsMock.format_score(home_goals, away_goals)
+                        bet.final_score = BetResultService.format_score(home_goals, away_goals)
 
         # Executa de forma assíncrona
         asyncio.run(process_bets())

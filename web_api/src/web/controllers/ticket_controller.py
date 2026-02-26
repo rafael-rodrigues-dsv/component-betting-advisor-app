@@ -161,13 +161,13 @@ async def simulate_ticket(ticket_id: str, request: SimulateTicketRequest) -> Sim
 @router.post("/tickets/{ticket_id}/simulate-auto")
 async def simulate_ticket_auto(ticket_id: str) -> SimulateTicketResponse:
     """
-    Simula resultado de um bilhete automaticamente usando mock da API Football.
+    Simula resultado de um bilhete automaticamente usando a API Football.
 
-    Consulta os resultados mockados das partidas e determina automaticamente
+    Consulta os resultados reais das partidas e determina automaticamente
     se cada aposta ganhou ou perdeu.
     """
     try:
-        ticket = ticket_service.simulate_ticket_with_api_mock(ticket_id)
+        ticket = ticket_service.simulate_ticket_with_api(ticket_id)
 
         # Mapeia o status para mensagem amigável
         status_messages = {
@@ -307,26 +307,5 @@ async def update_ticket_result(ticket_id: str):
         logger.error(f"❌ Erro ao atualizar bilhete: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/tickets/clear-cache")
-async def clear_results_cache():
-    """
-    Limpa o cache de resultados mockados (apenas para testes).
-
-    Útil para resetar o sistema de simulação temporal.
-    """
-    try:
-        from infrastructure.external.api_football.results_mock import FixtureResultsMock
-
-        FixtureResultsMock.clear_cache()
-        logger.info("🗑️ Cache de resultados limpo")
-
-        return {
-            "success": True,
-            "message": "Cache de resultados limpo com sucesso"
-        }
-    except Exception as e:
-        logger.error(f"❌ Erro ao limpar cache: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 

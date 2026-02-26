@@ -107,7 +107,7 @@ async def startup_event():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "mode": "mock"}
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":
