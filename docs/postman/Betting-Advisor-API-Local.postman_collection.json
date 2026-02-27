@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "betting-advisor-api-local",
 		"name": "Betting Advisor API - Local",
-		"description": "Collection completa da API Betting Advisor v4.0 para testes locais.\n\n**Base URL:** http://localhost:8000\n\n**Endpoints disponíveis:**\n- Health Check\n- Preload (Pré-carregamento)\n- Matches (Jogos)\n- Odds (Cotações)\n- Leagues (Ligas)\n- Bookmakers (Casas de Apostas)\n- Predictions (Análises)\n- Tickets (Bilhetes)\n- Static Assets\n\n**Versão:** 4.0.0\n**Status:** API-Football Real (sem mocks)",
+		"description": "Collection completa da API Betting Advisor v5.0 para testes locais.\n\n**Base URL:** http://localhost:8000\n\n**Endpoints disponíveis:**\n- Health Check\n- Preload (Pré-carregamento)\n- Matches (Jogos + Ao Vivo)\n- Odds (Por Liga + Individual)\n- Leagues (Ligas)\n- Bookmakers (Casas de Apostas)\n- Predictions (Análises - 3 Estratégias)\n- Tickets (Bilhetes + Acompanhamento ao Vivo)\n- Static Assets\n\n**Versão:** 5.0.0\n**Status:** API-Football Real (sem mocks)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -29,6 +29,27 @@
 			"name": "📦 Preload",
 			"item": [
 				{
+					"name": "📅 Preload Hoje",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/preload/fetch?days=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "preload", "fetch"],
+							"query": [
+								{
+									"key": "days",
+									"value": "1",
+									"description": "Apenas hoje"
+								}
+							]
+						},
+						"description": "Pré-carrega fixtures para hoje.\nCarrega APENAS fixtures, não odds.\nOdds são carregadas por liga ao selecionar no carrossel."
+					},
+					"response": []
+				},
+				{
 					"name": "⚡ Preload 3 Dias",
 					"request": {
 						"method": "POST",
@@ -40,17 +61,16 @@
 							"query": [
 								{
 									"key": "days",
-									"value": "3",
-									"description": "Período em dias (3, 7 ou 14)"
+									"value": "3"
 								}
 							]
 						},
-						"description": "Pré-carrega fixtures (jogos) da API-Football para os próximos 3 dias.\n\nCarrega APENAS fixtures, não odds.\nOdds são carregadas via batch ou refresh individual.\n\nCache incremental: se já tem 3 dias e pedir 7, busca apenas dias 4-7."
+						"description": "Pré-carrega fixtures para os próximos 3 dias.\nCache incremental: reaproveita dias já carregados."
 					},
 					"response": []
 				},
 				{
-					"name": "📅 Preload 7 Dias",
+					"name": "📆 Preload 7 Dias",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -65,27 +85,7 @@
 								}
 							]
 						},
-						"description": "Pré-carrega fixtures para os próximos 7 dias.\nAproveita cache de 3 dias se existir."
-					},
-					"response": []
-				},
-				{
-					"name": "📆 Preload 14 Dias",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/v1/preload/fetch?days=14",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "preload", "fetch"],
-							"query": [
-								{
-									"key": "days",
-									"value": "14"
-								}
-							]
-						},
-						"description": "Pré-carrega fixtures para os próximos 14 dias.\nAproveita cache de 3 ou 7 dias se existir."
+						"description": "Pré-carrega fixtures para os próximos 7 dias.\nCache incremental: reaproveita cache de 3 dias."
 					},
 					"response": []
 				},
@@ -99,7 +99,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "preload", "status"]
 						},
-						"description": "Retorna o status do cache de preload (último período carregado, data base)."
+						"description": "Retorna o status do cache de preload."
 					},
 					"response": []
 				}
@@ -114,23 +114,23 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/matches?date_from=2026-02-26&date_to=2026-02-28",
+							"raw": "{{base_url}}/api/v1/matches?date_from=2026-02-27&date_to=2026-03-01",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "matches"],
 							"query": [
 								{
 									"key": "date_from",
-									"value": "2026-02-26",
+									"value": "2026-02-27",
 									"description": "Data início (YYYY-MM-DD)"
 								},
 								{
 									"key": "date_to",
-									"value": "2026-02-28",
+									"value": "2026-03-01",
 									"description": "Data fim (YYYY-MM-DD)"
 								}
 							]
 						},
-						"description": "Retorna jogos do cache filtrados por período.\nRequer preload prévio.\n\nFiltra automaticamente apenas partidas ativas (NS, 1H, 2H, HT, etc)."
+						"description": "Retorna jogos do cache filtrados por período.\nRequer preload prévio.\nFiltra apenas partidas ativas."
 					},
 					"response": []
 				},
@@ -140,26 +140,30 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/matches?date_from=2026-02-26&date_to=2026-02-28&league_id=71",
+							"raw": "{{base_url}}/api/v1/matches?date_from=2026-02-27&date_to=2026-03-01&league_id=71",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "matches"],
 							"query": [
-								{
-									"key": "date_from",
-									"value": "2026-02-26"
-								},
-								{
-									"key": "date_to",
-									"value": "2026-02-28"
-								},
-								{
-									"key": "league_id",
-									"value": "71",
-									"description": "ID da liga (71=Brasileirão, 39=Premier League, etc)"
-								}
+								{ "key": "date_from", "value": "2026-02-27" },
+								{ "key": "date_to", "value": "2026-03-01" },
+								{ "key": "league_id", "value": "71", "description": "ID da liga (71=Brasileirão)" }
 							]
 						},
-						"description": "Retorna jogos de uma liga específica no período.\n\nLeague IDs:\n- 71: Brasileirão Série A\n- 73: Copa do Brasil\n- 39: Premier League\n- 140: La Liga\n- 78: Bundesliga\n- 61: Ligue 1\n- 135: Serie A Itália"
+						"description": "Retorna jogos de uma liga específica no período."
+					},
+					"response": []
+				},
+				{
+					"name": "🔴 Get Live Matches",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/live",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", "live"]
+						},
+						"description": "Retorna jogos ao vivo em tempo real da API-Football.\nUsado pelo frontend para a seção 'Ao Vivo' no carrossel de ligas."
 					},
 					"response": []
 				}
@@ -168,6 +172,26 @@
 		{
 			"name": "📊 Odds",
 			"item": [
+				{
+					"name": "🏆 Load Odds by League (Recomendado)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"league_id\": 71\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/preload/odds/league",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "preload", "odds", "league"]
+						},
+						"description": "Carrega odds de TODOS os jogos de uma liga nas datas do período.\nUsa GET /odds?league={id}&date={date} (bulk da API-Football).\nMuito mais eficiente que buscar por fixture individual.\n\nDisparado automaticamente quando o usuário seleciona uma liga no carrossel."
+					},
+					"response": []
+				},
 				{
 					"name": "💰 Get Odds (Single Match)",
 					"request": {
@@ -178,14 +202,10 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "matches", ":fixture_id", "odds"],
 							"variable": [
-								{
-									"key": "fixture_id",
-									"value": "1387913",
-									"description": "ID da partida"
-								}
+								{ "key": "fixture_id", "value": "1387913", "description": "ID da partida" }
 							]
 						},
-						"description": "Retorna odds de uma partida (do cache ou API-Football).\n\nFiltra apenas casas suportadas (Bet365, Betano)."
+						"description": "Retorna odds de uma partida (do cache ou API-Football)."
 					},
 					"response": []
 				},
@@ -199,37 +219,30 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "matches", ":fixture_id", "odds", "refresh"],
 							"variable": [
-								{
-									"key": "fixture_id",
-									"value": "1387913",
-									"description": "ID da partida"
-								}
+								{ "key": "fixture_id", "value": "1387913" }
 							]
 						},
-						"description": "Força refresh de odds + status da partida.\n\nDeleta cache → busca API-Football → cacheia novos dados.\n\nRetorna: { odds, status, status_short }"
+						"description": "Força refresh de odds + status da partida.\nDeleta cache → busca API → cacheia novos dados."
 					},
 					"response": []
 				},
 				{
-					"name": "📦 Batch Odds",
+					"name": "📦 Batch Odds (Legacy)",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"fixture_ids\": [\n    \"1387913\",\n    \"1387914\",\n    \"1387915\"\n  ]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/v1/matches/odds/batch",
+							"raw": "{{base_url}}/api/v1/preload/odds",
 							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "matches", "odds", "batch"]
+							"path": ["api", "v1", "preload", "odds"]
 						},
-						"description": "Busca odds de múltiplas partidas de uma vez.\n\nUsado pelo frontend em chunks de 10 após preload."
+						"description": "Busca odds de múltiplas partidas de uma vez.\nPreferível usar 'Load Odds by League' que é mais eficiente."
 					},
 					"response": []
 				}
@@ -248,7 +261,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "leagues"]
 						},
-						"description": "Retorna todas as ligas/campeonatos disponíveis (7 ligas configuradas)."
+						"description": "Retorna todas as ligas disponíveis no período carregado.\nUsado pelo carrossel de ligas no frontend."
 					},
 					"response": []
 				}
@@ -267,7 +280,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "bookmakers"]
 						},
-						"description": "Retorna casas de apostas suportadas (Bet365, Betano).\n\nConfigurável via SUPPORTED_BOOKMAKERS no .env."
+						"description": "Retorna casas de apostas suportadas (Bet365, Betano)."
 					},
 					"response": []
 				}
@@ -281,10 +294,7 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
@@ -295,7 +305,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "analyze"]
 						},
-						"description": "Analisa jogos com estratégia CONSERVADORA (default).\n\nRetorna:\n- predictions: previsões por jogo com mercados\n- odds_by_bookmaker: odds reais de cada casa (para comparação)\n- pre_ticket: pré-bilhete montado automaticamente\n\nEstratégias: CONSERVATIVE, BALANCED, VALUE_BET, AGGRESSIVE"
+						"description": "Analisa jogos com estratégia CONSERVADORA (default).\n\nRetorna predictions, odds_by_bookmaker, pre_ticket.\n\nEstratégias: CONSERVATIVE, BALANCED, AGGRESSIVE"
 					},
 					"response": []
 				},
@@ -304,10 +314,7 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
@@ -323,41 +330,15 @@
 					"response": []
 				},
 				{
-					"name": "💰 Analyze (Value Bet)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"match_ids\": [\n    \"1387913\",\n    \"1387914\",\n    \"1387915\"\n  ],\n  \"strategy\": \"VALUE_BET\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/api/v1/analyze",
-							"host": ["{{base_url}}"],
-							"path": ["api", "v1", "analyze"]
-						},
-						"description": "Analisa jogos buscando VALUE BETS (discrepâncias de odds entre casas)."
-					},
-					"response": []
-				},
-				{
 					"name": "🔥 Analyze (Aggressive)",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"match_ids\": [\n    \"1387913\"\n  ],\n  \"strategy\": \"AGGRESSIVE\"\n}"
+							"raw": "{\n  \"match_ids\": [\n    \"1387913\",\n    \"1387914\",\n    \"1387915\"\n  ],\n  \"strategy\": \"AGGRESSIVE\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/analyze",
@@ -378,21 +359,18 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
+							{ "key": "Content-Type", "value": "application/json" }
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Rodada 5 - Conservadora - Betano\",\n  \"stake\": 50.00,\n  \"bookmaker_id\": \"betano\",\n  \"bets\": [\n    {\n      \"match_id\": \"1387913\",\n      \"home_team\": \"Flamengo\",\n      \"away_team\": \"Palmeiras\",\n      \"league\": \"Brasileirão Série A\",\n      \"market\": \"MATCH_WINNER\",\n      \"predicted_outcome\": \"HOME\",\n      \"odds\": 2.15,\n      \"confidence\": 0.55\n    },\n    {\n      \"match_id\": \"1387914\",\n      \"home_team\": \"Vasco\",\n      \"away_team\": \"Corinthians\",\n      \"league\": \"Brasileirão Série A\",\n      \"market\": \"OVER_UNDER\",\n      \"predicted_outcome\": \"OVER_2.5\",\n      \"odds\": 1.90,\n      \"confidence\": 0.52\n    }\n  ]\n}"
+							"raw": "{\n  \"name\": \"Rodada 5 - Conservadora - Betano\",\n  \"stake\": 50.00,\n  \"bookmaker_id\": \"betano\",\n  \"bets\": [\n    {\n      \"match_id\": \"1387913\",\n      \"home_team\": \"Flamengo\",\n      \"away_team\": \"Palmeiras\",\n      \"league\": \"Brasileirão Série A\",\n      \"market\": \"MATCH_WINNER\",\n      \"predicted_outcome\": \"HOME\",\n      \"odds\": 2.15,\n      \"confidence\": 0.55\n    },\n    {\n      \"match_id\": \"1387914\",\n      \"home_team\": \"Vasco\",\n      \"away_team\": \"Corinthians\",\n      \"league\": \"Brasileirão Série A\",\n      \"market\": \"OVER_UNDER\",\n      \"predicted_outcome\": \"OVER\",\n      \"odds\": 1.90,\n      \"confidence\": 0.52\n    }\n  ]\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/tickets",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets"]
 						},
-						"description": "Cria um novo bilhete de apostas.\n\nMarkets: MATCH_WINNER, OVER_UNDER, BTTS\nOutcomes: HOME, DRAW, AWAY, OVER_2.5, UNDER_2.5, YES, NO\n\nA casa de apostas (bookmaker_id) é escolhida na comparação de bilhetes."
+						"description": "Cria um novo bilhete de apostas.\n\nMarkets: MATCH_WINNER, OVER_UNDER, BTTS\nOutcomes: HOME, DRAW, AWAY, OVER, UNDER, YES, NO\n\nBilhete criado via modal no frontend."
 					},
 					"response": []
 				},
@@ -406,7 +384,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets"]
 						},
-						"description": "Retorna todos os bilhetes com status das partidas (status, status_short)."
+						"description": "Retorna todos os bilhetes com dados ao vivo (elapsed, goals_home, goals_away, status_short)."
 					},
 					"response": []
 				},
@@ -420,14 +398,10 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets", ":ticket_id"],
 							"variable": [
-								{
-									"key": "ticket_id",
-									"value": "550e8400-e29b-41d4-a716-446655440000",
-									"description": "ID do ticket (UUID)"
-								}
+								{ "key": "ticket_id", "value": "550e8400-e29b-41d4-a716-446655440000" }
 							]
 						},
-						"description": "Retorna detalhes de um bilhete específico."
+						"description": "Retorna detalhes de um bilhete com dados ao vivo."
 					},
 					"response": []
 				},
@@ -441,11 +415,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets", ":ticket_id"],
 							"variable": [
-								{
-									"key": "ticket_id",
-									"value": "550e8400-e29b-41d4-a716-446655440000",
-									"description": "ID do ticket"
-								}
+								{ "key": "ticket_id", "value": "550e8400-e29b-41d4-a716-446655440000" }
 							]
 						},
 						"description": "Deleta um bilhete e todas as suas apostas."
@@ -462,12 +432,12 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets", "stats", "dashboard"]
 						},
-						"description": "Retorna estatísticas do dashboard (total, ganhos, perdas, pendentes, taxa acerto, etc)."
+						"description": "Retorna estatísticas do dashboard."
 					},
 					"response": []
 				},
 				{
-					"name": "🔄 Update Results",
+					"name": "🔄 Update All Results",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -476,7 +446,24 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "tickets", "update-results"]
 						},
-						"description": "Atualiza resultados reais de todas as apostas pendentes.\n\nBusca resultado na API-Football, compara com a aposta, atualiza status/status_short."
+						"description": "Atualiza resultados de TODOS os bilhetes pendentes.\n\nBusca na API-Football: status, elapsed, goals_home, goals_away.\nSempre persiste dados parciais (ao vivo).\nSe finalizado: compara resultado com aposta → WON/LOST."
+					},
+					"response": []
+				},
+				{
+					"name": "🔄 Update Single Ticket Result",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/tickets/:ticket_id/update-result",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "tickets", ":ticket_id", "update-result"],
+							"variable": [
+								{ "key": "ticket_id", "value": "550e8400-e29b-41d4-a716-446655440000" }
+							]
+						},
+						"description": "Atualiza resultado de um bilhete específico.\nMesma lógica do update-results, mas para um ticket só."
 					},
 					"response": []
 				}
@@ -495,7 +482,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["static", "escudos", "flamengo.png"]
 						},
-						"description": "Retorna o escudo de um time.\n\nEscudos disponíveis: flamengo, palmeiras, corinthians, santos, sao-paulo, vasco, manchester-city, liverpool, arsenal, chelsea, etc."
+						"description": "Retorna o escudo de um time."
 					},
 					"response": []
 				}

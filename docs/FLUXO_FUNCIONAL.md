@@ -2,8 +2,8 @@
 
 > Fluxo funcional real implementado — API-Football integrada, sem mocks
 
-**Data:** 2026-02-26  
-**Versão:** 4.0.0  
+**Data:** 2026-02-27  
+**Versão:** 5.0.0  
 **Status:** ✅ Produção (API-Football Real)
 
 ---
@@ -14,12 +14,13 @@
 2. [Fluxo do Usuário](#fluxo-do-usuário)
 3. [Fluxo 1: Dashboard](#fluxo-1-dashboard)
 4. [Fluxo 2: Carregar Jogos por Período](#fluxo-2-carregar-jogos-por-período)
-5. [Fluxo 3: Visualizar Jogos e Odds](#fluxo-3-visualizar-jogos-e-odds)
-6. [Fluxo 4: Analisar Jogos](#fluxo-4-analisar-jogos)
-7. [Fluxo 5: Previsões e Comparação de Casas](#fluxo-5-previsões-e-comparação-de-casas)
-8. [Fluxo 6: Criar Bilhete](#fluxo-6-criar-bilhete)
-9. [Fluxo 7: Acompanhar Bilhetes](#fluxo-7-acompanhar-bilhetes)
-10. [Detalhes Técnicos](#detalhes-técnicos)
+5. [Fluxo 3: Carrossel de Ligas e Odds](#fluxo-3-carrossel-de-ligas-e-odds)
+6. [Fluxo 4: Filtros Avançados](#fluxo-4-filtros-avançados)
+7. [Fluxo 5: Analisar Jogos](#fluxo-5-analisar-jogos)
+8. [Fluxo 6: Previsões e Comparação de Casas](#fluxo-6-previsões-e-comparação-de-casas)
+9. [Fluxo 7: Criar Bilhete (Modal)](#fluxo-7-criar-bilhete-modal)
+10. [Fluxo 8: Acompanhar Bilhetes ao Vivo](#fluxo-8-acompanhar-bilhetes-ao-vivo)
+11. [Detalhes Técnicos](#detalhes-técnicos)
 
 ---
 
@@ -28,46 +29,40 @@
 O sistema segue um fluxo sob demanda com carregamento incremental:
 
 ```
-Selecionar Período → Preload Fixtures → Batch Odds → Seleção → Análise → Estratégia → Comparar Casas → Bilhete
-       ↓                   ↓                ↓           ↓         ↓          ↓               ↓              ↓
-  3/7/14 dias       API-Football      Cache + API    Filtros   CONSERVATIVE  Re-analisa    Bet365 vs      Confirmar
-                   (só fixtures)     (por partida)             como default  ao trocar     Betano
+Período → Preload Fixtures → Carrossel Ligas → Odds por Liga → Filtros → Seleção → Análise → Modal → Bilhete
+   ↓            ↓                 ↓                 ↓             ↓         ↓         ↓         ↓        ↓
+Hoje/3/7   API-Football      Multi-select       Por liga/data   Status   Checkbox   3 Estrat.  Editar  Ao vivo
+           (só fixtures)     + busca + filtro    (bulk API)     Odds/etc            Trocar mkt  placar
 ```
 
-### ⚡ Carregamento Sob Demanda (Sem auto-load no startup)
+### ⚡ Carregamento Sob Demanda
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│              🚀 CARREGAMENTO SOB DEMANDA (POST /api/v1/preload/fetch)       │
+│              🚀 CARREGAMENTO SOB DEMANDA                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  QUANDO: Usuário clica em 3, 7 ou 14 dias na tela de Jogos                │
+│  QUANDO: Usuário clica em Hoje, 3 ou 7 dias na tela de Jogos              │
 │                                                                             │
 │  ETAPA 1 — PRELOAD (fixtures, SEM odds):                                   │
-│  • Busca fixtures das 7 ligas na API-Football                              │
-│  • Cache incremental: 3→7 reaproveita, 7→14 reaproveita                   │
+│  • Busca fixtures de TODAS as ligas na API-Football                        │
+│  • Cache incremental: Hoje→3 reaproveita, 3→7 reaproveita                 │
 │  • Fixtures cacheados em SQLite (TTL 6h)                                   │
 │  • Filtra apenas partidas ativas (NS, 1H, 2H, HT, etc.)                   │
+│  • Carrega ligas disponíveis no carrossel                                   │
 │                                                                             │
-│  ETAPA 2 — ODDS (batch automático após preload):                           │
-│  • Dispara carregamento de odds para TODAS as partidas                     │
-│  • Chunks de 10 partidas por vez (não bloqueia UI)                         │
+│  ETAPA 2 — ODDS POR LIGA (sob demanda ao selecionar no carrossel):         │
+│  • Usuário seleciona liga(s) no carrossel                                  │
+│  • POST /api/v1/preload/odds/league { league_id }                          │
+│  • Busca GET /odds?league={id}&date={date} na API-Football (bulk)          │
+│  • Muito mais eficiente que 1 request por fixture                          │
 │  • Odds cacheadas em SQLite (TTL 30min)                                    │
-│  • Filtro: apenas Bet365 e Betano (SUPPORTED_BOOKMAKERS)                   │
 │                                                                             │
 │  ETAPA 3 — REFRESH (sob demanda por partida):                              │
 │  • Botão 🔄 em cada partida atualiza odds + status                        │
 │  • Deleta cache da partida e busca da API novamente                        │
 │                                                                             │
-│  🇧🇷 Ligas:                                                                 │
-│  • Brasileirão Série A (71) • Copa do Brasil (73)                          │
-│                                                                             │
-│  🇪🇺 Europa — Top 5:                                                        │
-│  • Premier League (39) • La Liga (140) • Bundesliga (78)                   │
-│  • Ligue 1 (61) • Serie A Itália (135)                                     │
-│                                                                             │
 │  🏠 Casas de Apostas: Bet365, Betano                                       │
-│                                                                             │
 │  ⏰ Timezone: America/Sao_Paulo (configurável via .env)                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -76,10 +71,10 @@ Selecionar Período → Preload Fixtures → Batch Odds → Seleção → Análi
 ### Cache Incremental
 
 ```
-Clicou 3 dias  → Busca fixtures dias 1-3 na API → Salva cache "3 dias"
-Clicou 7 dias  → Já tem 3 dias no cache → Busca apenas dias 4-7
-Clicou 14 dias → Já tem 7 dias no cache → Busca apenas dias 8-14
-Clicou 3 dias  → Cache de 7 já cobre → Não faz nenhum request
+Clicou Hoje   → Busca fixtures do dia na API → Salva cache "1 dia"
+Clicou 3 dias → Já tem Hoje no cache → Busca apenas dias 2-3
+Clicou 7 dias → Já tem 3 dias no cache → Busca apenas dias 4-7
+Clicou Hoje   → Cache de 3 já cobre → Não faz nenhum request
 ```
 
 ---
@@ -95,38 +90,38 @@ Clicou 3 dias  → Cache de 7 já cobre → Não faz nenhum request
                                     │
         ┌───────────────────────────┼───────────────────────────┐
         ▼                           ▼                           ▼
-┌───────────────┐         ┌─────────────────┐         ┌──────────────���──┐
-│  📊 DASHBOARD │         │  ⚽ JOGOS        │         │  🎫 BILHETES    │
-│  Estatísticas │         │  Período → Odds │         │  Histórico      │
-│  dos bilhetes │         │  Filtro Liga    │         │  Status partida │
-└───────────────┘         │  Select All/Day │         └─────────────────┘
-                          └────────┬────────┘
-                                   │ Analisar (default: Conservadora)
-                          ┌────────▼────────┐
-                          │  🎯 PREVISÕES    │
-                          │  Trocar estratég.│
-                          │  Resumo compacto │
-                          └────────┬────────┘
-                                   │
-                          ┌────────▼────────┐
-                          │  🔄 COMPARAÇÃO   │
-                          │  Bet365 vs Betano│
-                          │  Recomendação    │
-                          └────────┬────────┘
-                                   │ "Usar X"
-                          ┌────────▼────────┐
-                          │  ✅ BILHETE      │
-                          │  Editar, excluir │
-                          │  Stake → Criar   │
-                          └─────────────────┘
+┌───────────────┐         ┌─────────────────────┐       ┌─────────────────┐
+│  📊 DASHBOARD │         │  ⚽ JOGOS            │       │  🎫 BILHETES    │
+│  Estatísticas │         │  Período Hoje/3/7   │       │  Histórico      │
+│  dos bilhetes │         │  Carrossel de ligas │       │  Placar ao vivo │
+└───────────────┘         │  Filtros avançados  │       │  Minuto/Barra   │
+                          │  Odds por liga      │       │  Ganho/Perdendo │
+                          └─────────┬───────────┘       └─────────────────┘
+                                    │ Analisar (default: Conservadora)
+                          ┌─────────▼───────────┐
+                          │  🎯 PREVISÕES        │
+                          │  3 Estratégias       │
+                          │  Todas as odds/mkt   │
+                          │  Resumo compacto     │
+                          └─────────┬───────────┘
+                                    │
+                          ┌─────────▼───────────┐
+                          │  🔄 COMPARAÇÃO       │
+                          │  Bet365 vs Betano    │
+                          │  Recomendação        │
+                          └─────────┬───────────┘
+                                    │ "Usar X" → Modal
+                          ┌─────────▼───────────┐
+                          │  🎫 MODAL BILHETE    │
+                          │  Editar apostas      │
+                          │  Trocar mercados     │
+                          │  Stake → Criar       │
+                          └─────────────────────┘
 ```
 
 ---
 
 ## 📊 Fluxo 1: Dashboard
-
-### Objetivo
-Visão geral das estatísticas dos bilhetes do usuário.
 
 ### Sequência
 
@@ -140,53 +135,26 @@ Visão geral das estatísticas dos bilhetes do usuário.
    └─ QuickGuide (guia rápido)
 ```
 
-### Componentes Envolvidos
-
-```typescript
-// Dashboard.tsx
-const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  
-  useEffect(() => {
-    loadStats(); // GET /api/v1/tickets/stats/dashboard
-  }, []);
-  
-  return (
-    <>
-      <StatsCard title="Total de Bilhetes" value={stats.total_tickets} />
-      <StatsCard title="Bilhetes Ganhos" value={stats.won_tickets} />
-      // ... mais stats
-      <QuickGuide />
-    </>
-  );
-};
-```
-
 ---
 
 ## ⚽ Fluxo 2: Carregar Jogos por Período
-
-### Objetivo
-Usuário escolhe período (3, 7 ou 14 dias) para carregar fixtures da API-Football.
 
 ### Sequência
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1. Usuário clica na aba "Jogos"                                             │
-│    └─ Vê o seletor de período: [⚡ 3 Dias] [📅 7 Dias] [📆 14 Dias]        │
+│    └─ Vê o seletor de período: [📅 Hoje] [⚡ 3 Dias] [📆 7 Dias]           │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 2. Usuário clica em "3 Dias" (exemplo)                                      │
 │    └─ useMatches.fetchByPeriod(3)                                           │
-│       ├─ Cancela batch de odds anterior (se existir)                        │
 │       ├─ POST /api/v1/preload/fetch?days=3                                  │
-│       │   → Backend: PreloadService.preload_main_leagues(3)                 │
+│       │   → Backend: PreloadService.preload_fixtures(3)                     │
 │       │   → Verifica cache incremental                                      │
-│       │   → Busca fixtures das 7 ligas × 3 datas na API-Football            │
-│       │   → Resolve season correta de cada liga via GET /leagues             │
+│       │   → Busca fixtures de TODAS as ligas × 3 datas na API-Football      │
 │       │   → Salva no SQLite cache (TTL 6h)                                  │
 │       │   → NÃO carrega odds (apenas fixtures)                              │
 │       │   → Retorna { date_from, date_to }                                  │
@@ -198,137 +166,152 @@ Usuário escolhe período (3, 7 ou 14 dias) para carregar fixtures da API-Footba
 │       │                                                                      │
 │       ├─ GET /api/v1/leagues                                                │
 │       ├─ GET /api/v1/bookmakers                                             │
-│       │                                                                      │
-│       └─ Dispara loadAllOdds(matches) em background                         │
-│          → POST /api/v1/matches/odds/batch (chunks de 10)                   │
-│          → Cada fixture: busca odds na API ou cache                         │
-│          → Filtra apenas Bet365 e Betano                                    │
-│          → Atualiza state dos matches com odds                              │
+│       └─ GET /api/v1/matches/live (polling a cada 5s)                       │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 3. Tela exibe jogos agrupados por data                                      │
-│    ├─ Header por data: "Hoje — quarta-feira, 26 de fevereiro" (expandível) │
-│    ├─ Checkbox por data: selecionar todos do dia                            │
-│    ├─ MatchCard por jogo                                                    │
-│    └─ Barra de progresso: "📊 Carregando odds: 15/39"                     │
+│ 3. Tela exibe carrossel de ligas (sem jogos visíveis até selecionar)        │
+│    ├─ Seção "Ao Vivo" com ligas que têm jogos em andamento                 │
+│    ├─ Seção principal com TODAS as ligas (filtráveis por país/tipo)         │
+│    ├─ Busca por nome de liga                                               │
+│    └─ Multi-select (pode selecionar várias ligas)                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Timezone
-
-O sistema usa `settings.today()` com timezone `America/Sao_Paulo` (configurável via `TIMEZONE` no `.env`). Garante que o período sempre inclua a data atual do usuário.
-
 ---
 
-## 🔎 Fluxo 3: Visualizar Jogos e Odds
+## 🎠 Fluxo 3: Carrossel de Ligas e Odds
 
-### Filtros na Tela de Jogos
-
-| Filtro | Tipo | Descrição |
-|--------|------|-----------|
-| 🏆 Campeonato | Dropdown | Todos ou liga específica (client-side) |
-
-> **Nota:** O filtro de estratégia foi movido para a tela de Previsões (v4.0).
-
-### Seleção de Jogos
-
-| Ação | Descrição |
-|------|-----------|
-| Checkbox no jogo | Seleciona/deseleciona individualmente |
-| Checkbox no header de data | Seleciona/deseleciona todos do dia |
-| Botão "Selecionar Todos" | Seleciona todos os jogos carregados |
-| Botão "Deselecionar Todos" | Limpa seleção |
-
-### MatchCard — Tabela Comparativa de Odds
-
-Cada partida exibe tabela com odds de todas as casas suportadas, com melhor odd destacada em verde:
+### Carrossel Multi-Select
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ 🇧🇷 Brasileirão Série A • Rodada 5          [Não iniciado]         │
-│ 📅 qua, 26 fev   🕐 20:00                                         │
-│                                                                     │
-│    🔴 Flamengo          vs          Palmeiras 🟢                   │
-│                                                                     │
-│ 🏟️ Maracanã                                                        │
-│                                                                     │
-│ 📊 Comparativo de Odds                               [🔄]          │
-│ ┌──────────┬────────┬────────┬────────┐                             │
-│ │ Casa     │   1    │   X    │   2    │                             │
-│ ├──────────┼────────┼────────┼────────┤                             │
-│ │ 🟢 Bet365│  2.10  │  3.20  │  2.80  │                             │
-│ │ 🟡 Betano│ *2.15* │ *3.25* │  2.75  │  ← verde = melhor odd      │
-│ └──────────┴────────┴────────┴────────┘                             │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🏆 Ligas Disponíveis (534)            🔍 [Buscar liga...]                  │
+│                                                                             │
+│ 🔴 AO VIVO ─────────────────────────────────────                           │
+│ ┌─────────┐ ┌─────────┐                                                   │
+│ │ 🏆 AFC  │ │ 🏆 Copa │ ← Ligas com jogos ao vivo                       │
+│ │ Cup     │ │ do Rei  │                                                   │
+│ │ 2 jogos │ │ 1 jogo  │                                                   │
+│ └─────────┘ └─────────┘                                                   │
+│                                                                             │
+│ Filtros: [Todas] [Ligas] [Copas]     País: [Todas] [Brazil] [England]...  │
+│                                                                             │
+│ ◄ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ... ►     │
+│   │ 🇧🇷 Bras.│ │ 🇬🇧 Prem.│ │ 🇪🇸 La  │ │ 🇩🇪 Bund.│ │ 🇫🇷 Ligu.│          │
+│   │ Série A │ │ League  │ │ Liga   │ │ esliga │ │ e 1    │          │
+│   │ [SEL]   │ │ 12 jogos│ │ 10 jgs │ │  9 jgs │ │  9 jgs │          │
+│   └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘          │
+│                                                                             │
+│ ✅ 1 liga selecionada: Brasileirão Série A (12 jogos)    [Limpar]          │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Refresh de Odds (Botão 🔄)
+### Carregamento de Odds ao Selecionar Liga
 
 ```
-1. Clica 🔄 → POST /api/v1/matches/{id}/odds/refresh
-2. Backend deleta cache de odds → busca API → busca status
-3. Retorna { odds, status, status_short }
-4. Frontend atualiza MatchCard (odds + badge de status)
+1. Usuário seleciona "Brasileirão Série A" no carrossel
+2. Frontend dispara: POST /api/v1/preload/odds/league { league_id: 71 }
+3. Backend:
+   ├─ Identifica datas do período atual (ex: 2026-02-27 a 2026-03-01)
+   ├─ Para cada data: GET /odds?league=71&date=YYYY-MM-DD (paginado)
+   ├─ Parseia odds, cacheia por fixture
+   └─ Retorna total de fixtures com odds
+4. Frontend recarrega matches → jogos agora têm odds
+5. Ligas sem odds: jogos ficam desabilitados (não selecionáveis)
 ```
 
 ---
 
-## 🧠 Fluxo 4: Analisar Jogos
+## 🔎 Fluxo 4: Filtros Avançados
+
+### Painel de Filtros
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🔍 Filtros                                                    [Limpar]     │
+│                                                                             │
+│ 📊 Status:    [Ao Vivo] [Não Iniciado] [Encerrado] [Suspenso]             │
+│ 💰 Odds:      [Todas] [Com Odds] [Sem Odds]                               │
+│ 🔄 Rodada:    [Todas] [Rodada 5] [Rodada 6] [...]                         │
+│ 📅 Data:      [Todas] [27/02] [28/02] [01/03]                             │
+│ 🕐 Horário:   [Todos] [Manhã] [Tarde] [Noite] [Madrugada]                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Regras
+
+- Jogos sem odds disponíveis **não podem** ser selecionados para análise
+- Filtros são client-side (não fazem requests)
+- Ligas com 0 jogos não aparecem no carrossel
+- Carrossel ordenado alfabeticamente
+
+---
+
+## 🧠 Fluxo 5: Analisar Jogos
 
 ### Sequência
 
 ```
-1. Seleciona jogos (checkbox em jogo, por dia, ou todos)
+1. Seleciona jogos (apenas jogos COM odds disponíveis)
+   ├─ Checkbox em jogo individual
+   ├─ Checkbox no header de data (seleciona todos do dia)
+   └─ Botão "Selecionar Todos"
+
 2. Clica "Analisar Selecionados"
    └─ POST /api/v1/analyze { match_ids, strategy: "CONSERVATIVE" }
-   └─ Estratégia default: CONSERVATIVE (o seletor está na tela de Previsões)
 
 3. Backend — PredictionApplicationService + OddsAnalyzer:
    ├─ Busca fixtures e odds do cache
-   ├─ Analisa por estratégia (CONSERVATIVE/BALANCED/VALUE_BET/AGGRESSIVE)
+   ├─ Analisa por estratégia (CONSERVATIVE/BALANCED/AGGRESSIVE)
    ├─ Gera previsões com múltiplos mercados (1X2, Over/Under, BTTS)
-   ├─ Diversifica recomendações (evita repetir mesmo mercado)
-   ├─ Retorna odds_by_bookmaker por partida (para comparação)
+   ├─ Diversifica recomendações
+   ├─ Retorna odds_by_bookmaker por partida
    └─ Cria pré-bilhete automaticamente
 
-4. Frontend navega automaticamente para aba "Previsões"
+4. Frontend navega para aba "Previsões"
 ```
 
 ---
 
-## 🎯 Fluxo 5: Previsões e Comparação de Casas
+## 🎯 Fluxo 6: Previsões e Comparação de Casas
 
-### Tela de Previsões (3 seções)
+### Tela de Previsões (4 seções)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  SEÇÃO 1: SELETOR DE ESTRATÉGIA                                             │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
-│  │ 🛡️ Conserv.  │ │ ⚖️ Balancead.│ │ 💰 Value Bet │ │ 🔥 Agressiva │       │
-│  │  [ATIVA]     │ │              │ │              │ │              │       │
-│  │ Menos risco  │ │ Equilíbrio   │ │ Foco em EV   │ │ Mais risco   │       │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘       │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                        │
+│  │ 🛡️ Conserv.  │ │ ⚖️ Balancead.│ │ 🔥 Agressiva │                        │
+│  │  [ATIVA]     │ │              │ │              │                        │
+│  │ Menos risco  │ │ Equilíbrio   │ │ Mais risco   │                        │
+│  └──────────────┘ └──────────────┘ └──────────────┘                        │
 │                                                                             │
 │  Trocar estratégia → re-analisa os MESMOS jogos com nova estratégia         │
-│  (POST /api/v1/analyze { match_ids, strategy: "VALUE_BET" })               │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  SEÇÃO 2: RESUMO COMPACTO DAS PREVISÕES                                     │
+│  SEÇÃO 2: RESUMO — TODAS AS ODDS DE CADA MERCADO                           │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │ Flamengo vs Palmeiras                            Brasileirão Série A │  │
-│  │ ⚽ Resultado   🏠 Vitória Mandante   @ 2.10   55%   🔥 Forte        │  │
-│  │ 🎯 Total Gols  ⬆️ Mais de 2.5       @ 1.85   52%   ✅ Recomendada  │  │
-│  │ ⚡ Ambos Marc. ✅ Sim                @ 1.72   48%   💭 Considerar   │  │
+│  │                                                                       │  │
+│  │ ⚽ Resultado Final                                                    │  │
+│  │   🏠 Mandante @ 2.10  55% +8% EV ✅ Recomendada                     │  │
+│  │   🤝 Empate   @ 3.40  —                                              │  │
+│  │   ✈️ Visitante @ 3.00  —                                              │  │
+│  │                                                                       │  │
+│  │ 🎯 Total de Gols                                                     │  │
+│  │   ⬆️ Mais 2.5  @ 1.85  52% +5% EV ✅ Recomendada                    │  │
+│  │   ⬇️ Menos 2.5 @ 1.95  —                                             │  │
+│  │                                                                       │  │
+│  │ ⚡ Ambos Marcam                                                       │  │
+│  │   ✅ Sim       @ 1.72  48% +3% EV 💭 Considerar                     │  │
+│  │   ❌ Não       @ 2.05  —                                              │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │ Vasco vs Corinthians                             Brasileirão Série A │  │
-│  │ ...                                                                  │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
+│  (Exibe TODAS as opções — recomendadas e não recomendadas)                  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -337,78 +320,129 @@ Cada partida exibe tabela com odds de todas as casas suportadas, com melhor odd 
 │                                                                             │
 │  ┌───────────────────────┐    ┌───────────────────────┐                     │
 │  │ 🟢 Bet365             │    │ 🟡 Betano     ⭐ MELHOR│                    │
-│  │                       │    │                       │                     │
-│  │ Flamengo vs Palmeiras │    │ Flamengo vs Palmeiras │                     │
-│  │ Resultado: Casa @2.10 │    │ Resultado: Casa @2.15 │                     │
-│  │                       │    │                       │                     │
-│  │ Vasco vs Corinthians  │    │ Vasco vs Corinthians  │                     │
-│  │ Over 2.5 gols  @1.85  │    │ Over 2.5 gols  @1.90  │                    │
-│  │                       │    │                       │                     │
 │  │ Odd Combinada: 3.89   │    │ Odd Combinada: 4.09   │                     │
 │  │ Retorno: R$ 194.25    │    │ Retorno: R$ 204.25    │                     │
-│  │                       │    │                       │                     │
 │  │ [✅ Usar Bet365]      │    │ [✅ Usar Betano]      │                     │
 │  └───────────────────────┘    └───────────────────────┘                     │
 │                                                                             │
-│  💡 Recomendação: Betano paga +5.1% melhor (R$ 10.00 a mais com R$ 50)     │
+│  💡 Recomendação: Betano paga +5.1% melhor                                 │
 └─────────────────────────────────────────────────────────────────────────────┘
-                                    │ "Usar Betano"
+                                    │ "Usar Betano" → abre Modal
                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  SEÇÃO 4: BILHETE MONTADO (após escolher casa)                               │
-│                                                                             │
-│  🎫 Novo Bilhete                                    🎰 BETANO              │
-│  ├─ Flamengo vs Palmeiras — Resultado: Casa @ 2.15  [×]                    │
-│  ├─ Vasco vs Corinthians — Over 2.5 gols @ 1.90     [×]                    │
-│  │                                                                          │
-│  │ Apostas: 2 | Odd Combinada: 4.09 | Retorno: R$ 204.25                  │
-│  │ Valor (R$): [50.00]                                                     │
-│  │                                                                          │
-│  │ [Limpar] [Criar Bilhete]                                                │
-└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Estratégias
 
-| Estratégia | Critério | Risco |
-|-----------|----------|-------|
-| 🛡️ CONSERVATIVE | Favoritos seguros (odd 1.50–2.00) | Baixo |
-| ⚖️ BALANCED | Favorito + value ≥3% | Médio |
-| 💰 VALUE_BET | Diferença entre casas ≥5% | Médio-Alto |
-| 🔥 AGGRESSIVE | Odds altas / zebras (≥2.50) | Alto |
+| Estratégia | Ordenação | Risco |
+|-----------|-----------|-------|
+| 🛡️ CONSERVATIVE | Por confiança (maior → menor) | Baixo |
+| ⚖️ BALANCED | `EV × 0.5 + Confiança × 0.5` | Médio |
+| 🔥 AGRESSIVE | `Odds × Confiança` | Alto |
 
 ---
 
-## 🎫 Fluxo 6: Criar Bilhete
+## 🎫 Fluxo 7: Criar Bilhete (Modal)
 
 ```
-1. Na tela de Previsões, escolhe a casa na comparação ("Usar Betano")
-2. Bilhete é montado automaticamente com odds da casa escolhida
-3. Pode remover apostas individualmente (botão ×)
-4. Define valor da aposta (stake)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MODAL: 🎫 Novo Bilhete                                    🎰 BETANO  [×] │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ Flamengo vs Palmeiras                              @ 2.15  [✏️] [×] │  │
+│  │ Resultado Final: Vitória Mandante                                    │  │
+│  │                                                                       │  │
+│  │ ┌── ✏️ Alterar aposta ────────────────────────────────────────────┐  │  │
+│  │ │ ⚽ Resultado Final                                               │  │  │
+│  │ │   🏠 Mandante  @ 2.15  ← atual                                  │  │  │
+│  │ │   🤝 Empate    @ 3.25                                            │  │  │
+│  │ │   ✈️ Visitante @ 2.75                                            │  │  │
+│  │ │ 🎯 Total de Gols                                                 │  │  │
+│  │ │   ⬆️ Mais 2.5  @ 1.90                                            │  │  │
+│  │ │   ⬇️ Menos 2.5 @ 1.90                                            │  │  │
+│  │ │ ⚡ Ambos Marcam                                                   │  │  │
+│  │ │   ✅ Sim       @ 1.75                                             │  │  │
+│  │ │   ❌ Não       @ 2.00                                             │  │  │
+│  │ └─────────────────────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  Apostas: 2 | Odd: 4.09 | Retorno: R$ 204.25                              │
+│  Valor (R$): [50.00]  [10] [25] [50] [100]                                │
+│                                                                             │
+│  [Limpar]                                              [✅ Criar Bilhete]  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Sequência
+
+```
+1. Usuário clica "Usar Bet365" ou "Usar Betano" na comparação
+2. Modal abre com bilhete pré-montado
+3. Pode editar cada aposta:
+   ├─ Clica ✏️ → expande painel com TODAS as opções (7 total)
+   ├─ Agrupa por mercado (Resultado, Total Gols, Ambos Marcam)
+   └─ Clica numa alternativa → substitui a aposta
+4. Define stake (valor)
 5. Clica "Criar Bilhete"
    └─ POST /api/v1/tickets { name, stake, bookmaker_id, bets }
-6. Backend: gera UUID, calcula odds combinadas, salva no SQLite
-7. Frontend: notificação de sucesso → navega para "Bilhetes"
+6. Modal fecha → navega para "Bilhetes"
 ```
 
 ---
 
-## 🎫 Fluxo 7: Acompanhar Bilhetes
+## 🎫 Fluxo 8: Acompanhar Bilhetes ao Vivo
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 📋 Histórico de Bilhetes                    🟢 Próxima verificação: 3s     │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Rodada 5 - Betano                                       [PENDENTE]     │ │
+│ │ 💰 Stake: R$ 50.00 │ 📊 Odd: 4.09 │ 🎯 Retorno: R$ 204.25           │ │
+│ │                                                                         │ │
+│ │ 🟢 Flamengo vs Palmeiras        1 × 0    67'   [2º Tempo]             │ │
+│ │ ██████████████████████░░░░░░░░░  (74%)                                 │ │
+│ │ 🏆 Brasileirão  ⚽ Resultado: Mandante  @ 2.15                        │ │
+│ │ ✓ Ganhando                                                             │ │
+│ │                                                                         │ │
+│ │ ⏳ Vasco vs Corinthians                         [Não iniciado]         │ │
+│ │ 🏆 Brasileirão  🎯 Over 2.5 gols  @ 1.90                             │ │
+│ │                                                                         │ │
+│ │ ⏳ Aguardando resultados...                              [🗑️ Excluir] │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Dados ao Vivo por Aposta
+
+| Dado | Quando Exibe | Descrição |
+|------|-------------|-----------|
+| ⚽ Placar | Ao vivo + Encerrado | `1 × 0` (vermelho pulsante se ao vivo) |
+| ⏱️ Minuto | Ao vivo | `67'` (pisca) |
+| 📊 Barra progresso | Ao vivo + Encerrado | 0-90min visual |
+| 🟢/🔴 Ganhando/Perdendo | Ao vivo | Baseado no placar parcial vs aposta |
+| 🏆 Liga | Sempre | Badge com nome da liga |
+| 📋 Status | Sempre | NS, 1º Tempo, Intervalo, 2º Tempo, Encerrado |
+
+### Sequência de Atualização
 
 ```
 1. Aba "Bilhetes" → GET /api/v1/tickets
-2. TicketHistory renderiza por status (PENDENTE / GANHOU / PERDEU)
-3. Cada aposta exibe badge de status da partida:
-   ├─ ⚪ Não iniciado (NS)
-   ├─ 🔴 Ao vivo (1H, 2H, HT, etc.)
-   ├─ ⚫ Encerrado (FT)
-   ├─ 🟡 Suspenso (SUSP)
-   └─ ⚪ A definir (TBD)
-4. "Atualizar Resultados" → POST /api/v1/tickets/update-results
-   ├─ Busca resultado real na API-Football (GET /fixtures?id=X)
-   ├─ Compara com aposta → atualiza status/status_short
-   └─ Calcula lucro/prejuízo
+2. Se há bilhetes PENDENTES → inicia polling automático (5s)
+3. A cada 5s:
+   ├─ POST /api/v1/tickets/update-results
+   │   → Backend busca GET /fixtures?id=X para cada partida
+   │   → Extrai: status, elapsed, goals_home, goals_away
+   │   → SEMPRE persiste dados parciais (mesmo não finalizados)
+   │   → Se finalizado: compara resultado com aposta → WON/LOST
+   │
+   ├─ GET /api/v1/tickets (recarrega dados atualizados)
+   │   → Frontend renderiza com placar, minuto, barra progresso
+   │
+   └─ Bilhetes com jogos ao vivo: borda vermelha pulsante
+
+4. Quando TODOS os jogos finalizam:
+   ├─ Ticket → GANHOU (todas certas) ou PERDEU (alguma errada)
+   └─ Exibe lucro/prejuízo
 ```
 
 ---
@@ -419,21 +453,25 @@ Cada partida exibe tabela com odds de todas as casas suportadas, com melhor odd 
 
 | Endpoint | Método | Descrição |
 |----------|--------|-----------|
-| `/api/v1/preload/fetch?days=N` | POST | Pré-carrega fixtures (3, 7, 14 dias) |
+| `/api/v1/preload/fetch?days=N` | POST | Pré-carrega fixtures (1, 3, 7 dias) |
 | `/api/v1/preload/status` | GET | Status do cache |
-| `/api/v1/matches` | GET | Lista jogos (do cache, com filtros de data) |
+| `/api/v1/preload/odds` | POST | Odds em lote (body: fixture_ids) |
+| `/api/v1/preload/odds/league` | POST | Odds por liga (body: league_id) |
+| `/api/v1/matches` | GET | Lista jogos (query: date_from, date_to, league_id) |
+| `/api/v1/matches/live` | GET | Jogos ao vivo (real-time) |
 | `/api/v1/matches/{id}/odds` | GET | Odds de uma partida |
 | `/api/v1/matches/{id}/odds/refresh` | POST | Refresh odds + status |
-| `/api/v1/matches/odds/batch` | POST | Odds em lote (chunks) |
-| `/api/v1/leagues` | GET | Lista campeonatos |
-| `/api/v1/bookmakers` | GET | Lista casas de apostas |
-| `/api/v1/analyze` | POST | Analisa jogos (retorna odds_by_bookmaker) |
-| `/api/v1/tickets` | GET | Lista bilhetes (com status partidas) |
+| `/api/v1/leagues` | GET | Campeonatos disponíveis |
+| `/api/v1/bookmakers` | GET | Casas de apostas |
+| `/api/v1/analyze` | POST | Analisa jogos (body: match_ids, strategy) |
+| `/api/v1/tickets` | GET | Lista bilhetes (com dados ao vivo) |
 | `/api/v1/tickets` | POST | Cria bilhete |
 | `/api/v1/tickets/{id}` | GET | Detalhes de um bilhete |
 | `/api/v1/tickets/{id}` | DELETE | Deleta bilhete |
+| `/api/v1/tickets/{id}/update-result` | POST | Atualiza resultado de um bilhete |
 | `/api/v1/tickets/stats/dashboard` | GET | Estatísticas |
-| `/api/v1/tickets/update-results` | POST | Atualiza resultados + status reais |
+| `/api/v1/tickets/update-results` | POST | Atualiza todos os pendentes (+ dados ao vivo) |
+| `/health` | GET | Health check |
 
 ### Sistema de Cache (SQLite)
 
@@ -451,7 +489,6 @@ Cada partida exibe tabela com odds de todas as casas suportadas, com melhor odd 
 | `API_FOOTBALL_KEY` | — | Chave da API-Football (obrigatória) |
 | `TIMEZONE` | `America/Sao_Paulo` | Timezone para cálculo de datas |
 | `SUPPORTED_BOOKMAKERS` | `bet365,betano` | Casas de apostas filtradas |
-| `MAIN_LEAGUES` | `71,73,39,140,78,61,135` | IDs das ligas |
 | `CACHE_TTL_FIXTURES` | `21600` | TTL fixtures (6h) |
 | `CACHE_TTL_ODDS` | `1800` | TTL odds (30min) |
 

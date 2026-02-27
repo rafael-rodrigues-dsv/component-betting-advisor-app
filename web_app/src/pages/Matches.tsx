@@ -15,7 +15,7 @@ export const MatchesPage: React.FC = () => {
   const { selectedLeagues, setSelectedLeagues, selectedStatuses, setSelectedStatuses, setActiveTab } = useApp();
 
   // Hooks
-  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, updateMatchOddsAndStatus, loadingOdds, oddsProgress, livePolling, startLivePolling, stopLivePolling } = useMatchesContext();
+  const { matches, leagues, preloading, selectedPeriod, dataLoaded, fetchByPeriod, loadOddsForLeagues, updateMatchOddsAndStatus, loadingOdds, oddsProgress, livePolling, startLivePolling, stopLivePolling } = useMatchesContext();
   const { analyzing, analyze } = usePrediction();
 
   // Inicia polling ao entrar na aba de jogos, para ao sair
@@ -82,6 +82,7 @@ export const MatchesPage: React.FC = () => {
       selectedPeriod={selectedPeriod}
       dataLoaded={dataLoaded}
       onFetchByPeriod={fetchByPeriod}
+      onLoadOddsForLeagues={loadOddsForLeagues}
       onOddsRefreshed={updateMatchOddsAndStatus}
       loadingOdds={loadingOdds}
       oddsProgress={oddsProgress}

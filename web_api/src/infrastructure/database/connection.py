@@ -107,6 +107,20 @@ class DatabaseConnection:
         except sqlite3.OperationalError:
             pass  # Coluna já existe
 
+        # Adiciona colunas de acompanhamento ao vivo (migração)
+        try:
+            cursor.execute("ALTER TABLE bets ADD COLUMN elapsed INTEGER")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cursor.execute("ALTER TABLE bets ADD COLUMN goals_home INTEGER")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cursor.execute("ALTER TABLE bets ADD COLUMN goals_away INTEGER")
+        except sqlite3.OperationalError:
+            pass
+
         # Índices para performance
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_tickets_status 

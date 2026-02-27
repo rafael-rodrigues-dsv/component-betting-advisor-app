@@ -96,7 +96,10 @@ def map_bet_domain_to_response(bet: Bet) -> TicketBetResponse:
         result=bet.result,
         final_score=bet.final_score,
         status=bet.status,
-        status_short=bet.status_short
+        status_short=bet.status_short,
+        elapsed=bet.elapsed,
+        goals_home=bet.goals_home,
+        goals_away=bet.goals_away,
     )
 
 

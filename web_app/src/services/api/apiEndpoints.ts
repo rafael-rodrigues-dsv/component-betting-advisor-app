@@ -131,6 +131,15 @@ interface PreloadOddsResponse {
   error?: string;
 }
 
+interface PreloadLeagueOddsResponse {
+  success: boolean;
+  league_id: string;
+  total_odds: number;
+  dates_loaded: { date: string; count: number; from_cache: boolean }[];
+  from_cache?: boolean;
+  error?: string;
+}
+
 interface PreloadStatusResponse {
   hasCache: boolean;
   leagues: string[];
@@ -143,9 +152,13 @@ export const preloadApi = {
   fetch: (days: number) =>
     apiPost<PreloadFetchResponse>(`/preload/fetch?days=${days}`, {}),
 
-  /** FASE 2: Carrega odds de UMA data (lento, paginado) */
+  /** FASE 2 (LEGACY): Carrega odds de UMA data (lento, paginado) */
   fetchOdds: (date: string) =>
     apiPost<PreloadOddsResponse>(`/preload/odds?date=${date}`, {}),
+
+  /** FASE 2b: Carrega odds de uma LIGA para múltiplas datas (sob demanda, equilibrado) */
+  fetchOddsByLeague: (leagueId: string, dates: string[]) =>
+    apiPost<PreloadLeagueOddsResponse>('/preload/odds/league', { league_id: leagueId, dates }),
 
   getStatus: () =>
     apiGet<PreloadStatusResponse>('/preload/status'),

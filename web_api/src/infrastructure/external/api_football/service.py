@@ -131,6 +131,61 @@ class APIFootballService:
         return all_odds
 
     # ========================================
+    # BULK: Odds por liga + data (equilibrado)
+    # ========================================
+
+    async def get_odds_by_league_and_date(self, league_id: int, odds_date: date, season: int = None) -> Dict[str, Dict[str, Any]]:
+        """
+        Busca odds de uma LIGA específica em uma data com cache (30min).
+
+        Usa GET /odds?league={id}&season={year}&date={date} — paginado, mas só fixtures da liga.
+        Muito mais eficiente que buscar TODAS as odds do dia.
+        Também popula cache individual odds:{fixture_id} para cada fixture.
+
+        Args:
+            league_id: ID da liga na API-Football
+            odds_date: Data das odds
+            season: Ano da season (obrigatório para a API-Football retornar dados)
+
+        Returns:
+            Dict[fixture_id_str, Dict[bookmaker_name, bookmaker_odds]]
+        """
+        cache_key = f"odds_league:{league_id}:{odds_date.isoformat()}"
+
+        # Cache HIT
+        cached = self.cache.get(cache_key)
+        if cached:
+            logger.debug(f"✅ Cache HIT: {cache_key} ({len(cached)} fixtures com odds)")
+            return cached
+
+        # Cache MISS - busca da API
+        params = {
+            "league": league_id,
+            "date": odds_date.isoformat()
+        }
+        if season:
+            params["season"] = season
+
+        logger.info(f"🌐 Buscando odds da liga {league_id} season={season} em {odds_date.isoformat()}...")
+
+        api_response = await self.client.get_all_pages("/odds", params)
+
+        # Parse bulk
+        league_odds = OddsParser.parse_bulk(api_response)
+
+        # Cache por liga+data (30 min)
+        if league_odds:
+            self.cache.set(cache_key, league_odds, ttl_seconds=settings.CACHE_TTL_ODDS)
+
+            # Popula cache individual para cada fixture
+            for fixture_id, odds in league_odds.items():
+                individual_key = f"odds:{fixture_id}"
+                self.cache.set(individual_key, odds, ttl_seconds=settings.CACHE_TTL_ODDS)
+
+        logger.info(f"📊 Liga {league_id}: {len(league_odds)} fixtures com odds em {odds_date.isoformat()}")
+        return league_odds
+
+    # ========================================
     # Individual: Odds por fixture (para refresh)
     # ========================================
 

@@ -9,7 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Strategy } from '../types';
 import { BookmakerComparison } from '../components/predictions/BookmakerComparison';
-import { TicketBuilder } from '../components/tickets/TicketBuilder';
+import { TicketModal } from '../components/tickets/TicketModal';
 import { usePrediction } from '../contexts/PredictionContext';
 import { useTicket } from '../contexts/TicketContext';
 import { useApp } from '../contexts/AppContext';
@@ -19,7 +19,6 @@ import { formatMarket, formatOutcome, formatRecommendation } from '../components
 const STRATEGIES: { value: Strategy; label: string; icon: string; desc: string }[] = [
   { value: 'CONSERVATIVE', label: 'Conservadora', icon: '🛡️', desc: 'Menos risco, odds menores' },
   { value: 'BALANCED', label: 'Balanceada', icon: '⚖️', desc: 'Equilíbrio risco/retorno' },
-  { value: 'VALUE_BET', label: 'Value Bet', icon: '💰', desc: 'Foco em valor esperado' },
   { value: 'AGGRESSIVE', label: 'Agressiva', icon: '🔥', desc: 'Mais risco, odds maiores' },
 ];
 
@@ -32,11 +31,14 @@ export const PredictionsPage: React.FC = () => {
     setStake,
     addToTicket,
     removeFromTicket,
+    replaceTicketBet,
     clearTicketBets,
     createTicket,
   } = useTicket();
 
   const [selectedBookmakerId, setSelectedBookmakerId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [creatingTicket, setCreatingTicket] = useState(false);
 
   // Limpa seleção de bookmaker quando novas previsões chegam
   useEffect(() => {
@@ -72,14 +74,24 @@ export const PredictionsPage: React.FC = () => {
         });
       }
     });
+
+    // Abre o modal automaticamente
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
   };
 
   const handleCreateTicket = async () => {
+    setCreatingTicket(true);
     const bookmaker = selectedBookmakerId || ticketBets[0]?.bookmaker_id || 'bet365';
     const ticket = await createTicket(stake, bookmaker);
+    setCreatingTicket(false);
     if (ticket) {
+      setIsModalOpen(false);
       showSuccess('✅ Bilhete criado! Redirecionando...');
-      setTimeout(() => setActiveTab('tickets'), 1000);
+      setTimeout(() => setActiveTab('tickets'), 800);
     }
   };
 
@@ -125,29 +137,90 @@ export const PredictionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Resumo das previsões (compacto) */}
+      {/* Resumo das previsões — todas as odds de cada mercado */}
       <div className="predictions-summary">
         <h3 className="section-title">📊 Resumo das Previsões</h3>
         <div className="predictions-compact-list">
-          {predictions.map((pred) => (
-            <div key={pred.id} className="prediction-compact-card">
-              <div className="prediction-compact-header">
-                <span className="prediction-compact-match">{pred.home_team} vs {pred.away_team}</span>
-                <span className="prediction-compact-league">{pred.league}</span>
+          {predictions.map((pred) => {
+            // Pega odds da primeira bookmaker disponível para mostrar todas as opções
+            const bkId = Object.keys(pred.odds_by_bookmaker || {})[0];
+            const bkOdds = bkId ? pred.odds_by_bookmaker![bkId] : null;
+
+            // Mapa de previsões por mercado+outcome
+            const predMap = new Map(pred.predictions.map(m => [`${m.market}:${m.predicted_outcome}`, m]));
+
+            // Monta todas as opções por mercado
+            const allOptions: { market: string; outcome: string; odds: number; predicted?: { confidence: number; ev: number; recommendation: string } }[] = [];
+
+            // MATCH_WINNER
+            if (bkOdds?.home) allOptions.push({ market: 'MATCH_WINNER', outcome: 'HOME', odds: bkOdds.home, predicted: predMap.has('MATCH_WINNER:HOME') ? { confidence: predMap.get('MATCH_WINNER:HOME')!.confidence, ev: predMap.get('MATCH_WINNER:HOME')!.expected_value, recommendation: predMap.get('MATCH_WINNER:HOME')!.recommendation } : undefined });
+            if (bkOdds?.draw) allOptions.push({ market: 'MATCH_WINNER', outcome: 'DRAW', odds: bkOdds.draw, predicted: predMap.has('MATCH_WINNER:DRAW') ? { confidence: predMap.get('MATCH_WINNER:DRAW')!.confidence, ev: predMap.get('MATCH_WINNER:DRAW')!.expected_value, recommendation: predMap.get('MATCH_WINNER:DRAW')!.recommendation } : undefined });
+            if (bkOdds?.away) allOptions.push({ market: 'MATCH_WINNER', outcome: 'AWAY', odds: bkOdds.away, predicted: predMap.has('MATCH_WINNER:AWAY') ? { confidence: predMap.get('MATCH_WINNER:AWAY')!.confidence, ev: predMap.get('MATCH_WINNER:AWAY')!.expected_value, recommendation: predMap.get('MATCH_WINNER:AWAY')!.recommendation } : undefined });
+            // OVER_UNDER
+            if (bkOdds?.over_25) allOptions.push({ market: 'OVER_UNDER', outcome: 'OVER', odds: bkOdds.over_25, predicted: predMap.has('OVER_UNDER:OVER') ? { confidence: predMap.get('OVER_UNDER:OVER')!.confidence, ev: predMap.get('OVER_UNDER:OVER')!.expected_value, recommendation: predMap.get('OVER_UNDER:OVER')!.recommendation } : undefined });
+            if (bkOdds?.under_25) allOptions.push({ market: 'OVER_UNDER', outcome: 'UNDER', odds: bkOdds.under_25, predicted: predMap.has('OVER_UNDER:UNDER') ? { confidence: predMap.get('OVER_UNDER:UNDER')!.confidence, ev: predMap.get('OVER_UNDER:UNDER')!.expected_value, recommendation: predMap.get('OVER_UNDER:UNDER')!.recommendation } : undefined });
+            // BTTS
+            if (bkOdds?.btts_yes) allOptions.push({ market: 'BTTS', outcome: 'YES', odds: bkOdds.btts_yes, predicted: predMap.has('BTTS:YES') ? { confidence: predMap.get('BTTS:YES')!.confidence, ev: predMap.get('BTTS:YES')!.expected_value, recommendation: predMap.get('BTTS:YES')!.recommendation } : undefined });
+            if (bkOdds?.btts_no) allOptions.push({ market: 'BTTS', outcome: 'NO', odds: bkOdds.btts_no, predicted: predMap.has('BTTS:NO') ? { confidence: predMap.get('BTTS:NO')!.confidence, ev: predMap.get('BTTS:NO')!.expected_value, recommendation: predMap.get('BTTS:NO')!.recommendation } : undefined });
+
+            // Se não temos odds_by_bookmaker, fallback para as previsões originais
+            const hasFullOdds = allOptions.length > 0;
+
+            return (
+              <div key={pred.id} className="prediction-compact-card">
+                <div className="prediction-compact-header">
+                  <span className="prediction-compact-match">{pred.home_team} vs {pred.away_team}</span>
+                  <span className="prediction-compact-league">{pred.league}</span>
+                </div>
+                <div className="prediction-compact-markets">
+                  {hasFullOdds ? (
+                    ['MATCH_WINNER', 'OVER_UNDER', 'BTTS'].map(marketKey => {
+                      const opts = allOptions.filter(o => o.market === marketKey);
+                      if (opts.length === 0) return null;
+                      return (
+                        <div key={marketKey} className="pcm-market-group">
+                          <div className="pcm-market-group-title">{formatMarket(marketKey)}</div>
+                          <div className="pcm-market-group-options">
+                            {opts.map((opt, oi) => (
+                              <div key={oi} className={`prediction-compact-market ${opt.predicted ? '' : 'pcm-no-prediction'}`}>
+                                <span className="pcm-outcome">{formatOutcome(opt.market, opt.outcome)}</span>
+                                <span className="pcm-odds">@ {opt.odds.toFixed(2)}</span>
+                                {opt.predicted ? (
+                                  <>
+                                    <span className={`pcm-ev ${opt.predicted.ev >= 0 ? 'pcm-ev-positive' : 'pcm-ev-negative'}`}>
+                                      {opt.predicted.ev >= 0 ? '+' : ''}{(opt.predicted.ev * 100).toFixed(1)}%
+                                    </span>
+                                    <span className="pcm-confidence">{(opt.predicted.confidence * 100).toFixed(0)}%</span>
+                                    <span className={`pcm-rec recommendation-${opt.predicted.recommendation}`}>{formatRecommendation(opt.predicted.recommendation)}</span>
+                                  </>
+                                ) : (
+                                  <span className="pcm-no-analysis">—</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    // Fallback: mostra só as previsões originais
+                    pred.predictions.map((m, idx) => (
+                      <div key={idx} className={`prediction-compact-market ${m.recommendation === 'AVOID' ? 'pcm-not-recommended' : ''}`}>
+                        <span className="pcm-name">{formatMarket(m.market)}</span>
+                        <span className="pcm-outcome">{formatOutcome(m.market, m.predicted_outcome)}</span>
+                        <span className="pcm-odds">@ {m.odds.toFixed(2)}</span>
+                        <span className={`pcm-ev ${m.expected_value >= 0 ? 'pcm-ev-positive' : 'pcm-ev-negative'}`}>
+                          {m.expected_value >= 0 ? '+' : ''}{(m.expected_value * 100).toFixed(1)}%
+                        </span>
+                        <span className="pcm-confidence">{(m.confidence * 100).toFixed(0)}%</span>
+                        <span className={`pcm-rec recommendation-${m.recommendation}`}>{formatRecommendation(m.recommendation)}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-              <div className="prediction-compact-markets">
-                {pred.predictions.map((m, idx) => (
-                  <div key={idx} className="prediction-compact-market">
-                    <span className="pcm-name">{formatMarket(m.market)}</span>
-                    <span className="pcm-outcome">{formatOutcome(m.market, m.predicted_outcome)}</span>
-                    <span className="pcm-odds">@ {m.odds.toFixed(2)}</span>
-                    <span className="pcm-confidence">{(m.confidence * 100).toFixed(0)}%</span>
-                    <span className={`pcm-rec recommendation-${m.recommendation}`}>{formatRecommendation(m.recommendation)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -190,18 +263,21 @@ export const PredictionsPage: React.FC = () => {
         />
       )}
 
-      {/* Bilhete montado (após escolher casa) */}
-      {selectedBookmakerId && ticketBets.length > 0 && (
-        <TicketBuilder
-          ticketBets={ticketBets}
-          stake={stake}
-          onStakeChange={setStake}
-          onRemoveBet={removeFromTicket}
-          onClear={() => { clearTicketBets(); setSelectedBookmakerId(null); }}
-          onCreate={handleCreateTicket}
-          bookmakerName={BOOKMAKER_NAMES[selectedBookmakerId] || selectedBookmakerId}
-        />
-      )}
+      {/* Modal de Bilhete (abre ao clicar "Usar Bet365" / "Usar Betano") */}
+      <TicketModal
+        isOpen={isModalOpen}
+        ticketBets={ticketBets}
+        stake={stake}
+        onStakeChange={setStake}
+        onRemoveBet={removeFromTicket}
+        onReplaceBet={replaceTicketBet}
+        onClose={handleCloseModal}
+        onCreate={handleCreateTicket}
+        bookmakerName={selectedBookmakerId ? (BOOKMAKER_NAMES[selectedBookmakerId] || selectedBookmakerId) : undefined}
+        bookmakerId={selectedBookmakerId || undefined}
+        creating={creatingTicket}
+        predictions={predictions}
+      />
     </>
   );
 };

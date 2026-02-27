@@ -1,13 +1,16 @@
 """
 Preload Controller - Endpoints de pré-carregamento sob demanda.
 
-Dois endpoints separados:
+Três endpoints:
 - POST /preload/fetch?days=N → carrega fixtures (rápido, mostra jogos)
-- POST /preload/odds?date=YYYY-MM-DD → carrega odds de 1 data (lento, background)
+- POST /preload/odds?date=YYYY-MM-DD → carrega odds de 1 data (LEGACY)
+- POST /preload/odds/league → carrega odds de uma liga sob demanda (equilibrado)
 """
 
 from datetime import timedelta
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
+from typing import List
 import logging
 
 from application.services.preload_service import PreloadService
@@ -44,7 +47,7 @@ async def fetch_preload(
         - leagues: ligas dinâmicas
         - dates: lista de datas carregadas (para o frontend usar no /preload/odds)
     """
-    allowed_days = [3, 7, 14]
+    allowed_days = [1, 3, 7]
     if days not in allowed_days:
         return {"success": False, "message": f"Valor inválido. Use: {allowed_days}"}
 
@@ -105,3 +108,54 @@ async def fetch_odds_for_date(
     except Exception as e:
         logger.error(f"❌ Erro ao carregar odds de {date}: {e}")
         return {"success": False, "date": date, "total_odds": 0, "error": str(e)}
+
+
+class LeagueOddsRequest(BaseModel):
+    """Request body para buscar odds de uma liga"""
+    league_id: str
+    dates: List[str]  # Lista de datas YYYY-MM-DD
+
+
+@router.post("/preload/odds/league")
+async def fetch_odds_for_league(request: LeagueOddsRequest):
+    """
+    Carrega odds de uma LIGA específica para as datas informadas.
+
+    Usa GET /odds?league={id}&date={date} — busca APENAS odds da liga,
+    muito mais eficiente que buscar todas as odds do dia.
+
+    Chamado pelo frontend quando o usuário seleciona uma liga no carrossel.
+
+    Body:
+        - league_id: ID da liga
+        - dates: Lista de datas YYYY-MM-DD que têm jogos dessa liga
+
+    Returns:
+        - total_odds: total de fixtures com odds carregadas
+        - dates_loaded: detalhes por data
+    """
+    logger.info(f"📊 Carregando odds da liga {request.league_id} para {len(request.dates)} datas")
+
+    try:
+        result = await preload_service.preload_odds_for_league(
+            league_id=request.league_id,
+            dates=request.dates
+        )
+
+        return {
+            "success": True,
+            "league_id": result["league_id"],
+            "total_odds": result["total_odds"],
+            "dates_loaded": result["dates_loaded"],
+            "from_cache": result.get("from_cache", False),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao carregar odds da liga {request.league_id}: {e}")
+        return {
+            "success": False,
+            "league_id": request.league_id,
+            "total_odds": 0,
+            "error": str(e)
+        }
+

@@ -51,6 +51,15 @@ class Bet:
     status_short: Optional[str] = None
     """Status curto da partida (ex: "NS", "1H", "FT")"""
 
+    elapsed: Optional[int] = None
+    """Minuto do jogo (ex: 45, 67, 90)"""
+
+    goals_home: Optional[int] = None
+    """Gols do time da casa (placar parcial/final)"""
+
+    goals_away: Optional[int] = None
+    """Gols do time visitante (placar parcial/final)"""
+
     def is_won(self) -> bool:
         """Verifica se a aposta foi ganha"""
         return self.result == "WON"

@@ -14,6 +14,7 @@ interface TicketContextType {
   setStake: (stake: number) => void;
   addToTicket: (prediction: Prediction, market: MarketPrediction) => void;
   removeFromTicket: (indexOrMatchId: number | string) => void;
+  replaceTicketBet: (index: number, newBet: TicketBet) => void;
   clearTicketBets: () => void;
   createTicket: (stake: number, bookmakerId: string) => Promise<Ticket | null>;
   loadTickets: () => Promise<void>;
@@ -68,6 +69,10 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const clearTicketBets = useCallback(() => {
     setTicketBets([]);
+  }, []);
+
+  const replaceTicketBet = useCallback((index: number, newBet: TicketBet) => {
+    setTicketBets(prev => prev.map((bet, i) => i === index ? newBet : bet));
   }, []);
 
   const createTicket = useCallback(async (stakeAmount: number, bookmakerId: string): Promise<Ticket | null> => {
@@ -204,6 +209,7 @@ export const TicketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setStake,
         addToTicket,
         removeFromTicket,
+        replaceTicketBet,
         clearTicketBets,
         createTicket,
         loadTickets,

@@ -113,6 +113,7 @@ export interface Prediction {
 // ============================================
 // TICKET
 // ============================================
+
 export interface TicketBet {
   match_id: string;
   home_team: string;
@@ -128,6 +129,12 @@ export interface TicketBet {
   final_score?: string | null;
   status?: string | null;
   status_short?: string | null;
+  /** Minuto do jogo (ao vivo) */
+  elapsed?: number | null;
+  /** Gols do time da casa */
+  goals_home?: number | null;
+  /** Gols do time visitante */
+  goals_away?: number | null;
 }
 
 export interface Ticket {
@@ -157,5 +164,5 @@ export interface DashboardStats {
 // APP STATE
 // ============================================
 export type Tab = 'dashboard' | 'matches' | 'predictions' | 'tickets';
-export type Strategy = 'BALANCED' | 'CONSERVATIVE' | 'VALUE_BET' | 'AGGRESSIVE';
+export type Strategy = 'BALANCED' | 'CONSERVATIVE' | 'AGGRESSIVE';
 

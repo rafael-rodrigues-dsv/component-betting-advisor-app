@@ -103,8 +103,9 @@ class PreloadService:
             logger.info(f"📦 Cache incremental fixtures: já tem {cached_days} dias, carregando mais {len(dates_to_fetch)}")
         else:
             self.cache.delete_by_prefix("fixtures:")
+            self.cache.delete_by_prefix("odds_league:")
             dates_to_fetch = all_dates
-            logger.info(f"🗑️ Cache limpo, carregando {len(dates_to_fetch)} dias de fixtures")
+            logger.info(f"🗑️ Cache limpo (fixtures + odds_league), carregando {len(dates_to_fetch)} dias de fixtures")
 
         logger.info(f"🚀 Carregando fixtures: {len(dates_to_fetch)} dias...")
 
@@ -147,13 +148,14 @@ class PreloadService:
         }
 
     # ========================================
-    # FASE 2: Odds de uma data (lento, paginado)
+    # FASE 2: Odds de uma data (lento, paginado) — LEGACY
     # ========================================
 
     async def preload_odds_for_date(self, odds_date_str: str) -> Dict[str, Any]:
         """
         Carrega odds de UMA data específica (com paginação).
         Chamado pelo frontend data por data, em background.
+        LEGACY — preferir preload_odds_for_league para buscar sob demanda.
 
         Args:
             odds_date_str: Data no formato YYYY-MM-DD
@@ -188,3 +190,139 @@ class PreloadService:
             "total_odds": count,
             "from_cache": False,
         }
+
+    # ========================================
+    # FASE 2b: Odds por liga (sob demanda, equilibrado)
+    # ========================================
+
+    async def preload_odds_for_league(self, league_id: str, dates: List[str]) -> Dict[str, Any]:
+        """
+        Carrega odds de uma LIGA específica para múltiplas datas.
+        Usa GET /odds?league={id}&season={year}&date={date}.
+
+        Extrai o season dos fixtures cacheados (necessário para a API-Football).
+
+        Args:
+            league_id: ID da liga (string)
+            dates: Lista de datas no formato YYYY-MM-DD
+
+        Returns:
+            Dict com total_odds e detalhes por data
+        """
+        from datetime import date as date_cls
+
+        league_id_int = int(league_id)
+        total_odds = 0
+        dates_loaded = []
+        all_from_cache = True
+
+        # Extrai season dos fixtures cacheados para esta liga
+        season = self._get_league_season(league_id, dates)
+        if season:
+            logger.info(f"🏆 Liga {league_id}: season={season}")
+        else:
+            logger.warning(f"⚠️ Liga {league_id}: season não encontrada nos fixtures")
+
+        for date_str in dates:
+            cache_key = f"odds_league:{league_id}:{date_str}"
+            cached = self.cache.get(cache_key)
+
+            if cached:
+                count = len(cached)
+                total_odds += count
+                dates_loaded.append({"date": date_str, "count": count, "from_cache": True})
+                logger.debug(f"✅ Odds liga {league_id} em {date_str}: {count} (cache)")
+                continue
+
+            # Verifica se esta liga tem fixtures nesta data (evita requests desnecessários)
+            has_fixtures = self._league_has_fixtures_on_date(league_id, date_str)
+            if not has_fixtures:
+                dates_loaded.append({"date": date_str, "count": 0, "from_cache": False})
+                logger.debug(f"⏭️ Liga {league_id} sem fixtures em {date_str}, pulando odds")
+                continue
+
+            all_from_cache = False
+
+            try:
+                parts = date_str.split("-")
+                odds_date = date_cls(int(parts[0]), int(parts[1]), int(parts[2]))
+
+                # Tenta com season principal
+                league_odds = await self.api_service.get_odds_by_league_and_date(
+                    league_id_int, odds_date, season=season
+                )
+
+                # Se não encontrou odds e season é do ano corrente, tenta ano anterior
+                # (ligas europeias usam season do ano anterior, ex: 2025/2026)
+                if not league_odds and season:
+                    alt_season = season - 1
+                    logger.info(f"🔄 Liga {league_id}: tentando season alternativa {alt_season}...")
+                    league_odds = await self.api_service.get_odds_by_league_and_date(
+                        league_id_int, odds_date, season=alt_season
+                    )
+                    if league_odds:
+                        logger.info(f"✅ Liga {league_id}: season correta é {alt_season}")
+
+                count = len(league_odds) if league_odds else 0
+                total_odds += count
+                dates_loaded.append({"date": date_str, "count": count, "from_cache": False})
+                logger.info(f"📊 Odds liga {league_id} em {date_str}: {count} fixtures")
+            except Exception as e:
+                logger.error(f"❌ Erro odds liga {league_id} em {date_str}: {e}")
+                dates_loaded.append({"date": date_str, "count": 0, "from_cache": False})
+
+        logger.info(f"✅ Odds liga {league_id}: {total_odds} fixtures em {len(dates)} datas")
+
+        return {
+            "league_id": league_id,
+            "total_odds": total_odds,
+            "dates_loaded": dates_loaded,
+            "from_cache": all_from_cache,
+        }
+
+    def _league_has_fixtures_on_date(self, league_id: str, date_str: str) -> bool:
+        """Verifica se uma liga tem fixtures em uma data específica."""
+        cached_fixtures = self.cache.get(f"fixtures:{date_str}")
+        if not cached_fixtures:
+            return False
+        return any(
+            str(f.get("league", {}).get("id", "")) == str(league_id)
+            for f in cached_fixtures
+        )
+
+    def _get_league_season(self, league_id: str, dates: List[str]) -> int:
+        """
+        Extrai o season (ano) de uma liga a partir dos fixtures cacheados.
+
+        Percorre as datas e busca o primeiro fixture da liga para extrair o season.
+        Fallback: usa o ano da primeira data como season.
+
+        Args:
+            league_id: ID da liga
+            dates: Lista de datas YYYY-MM-DD
+
+        Returns:
+            Ano da season (ex: 2026) ou None
+        """
+        for date_str in dates:
+            cached_fixtures = self.cache.get(f"fixtures:{date_str}")
+            if not cached_fixtures:
+                continue
+            for fixture in cached_fixtures:
+                fixture_league = fixture.get("league", {})
+                if str(fixture_league.get("id", "")) == str(league_id):
+                    season = fixture_league.get("season")
+                    if season:
+                        return int(season)
+
+        # Fallback: extrai ano da primeira data
+        if dates:
+            try:
+                year = int(dates[0].split("-")[0])
+                logger.info(f"⚠️ Liga {league_id}: season fallback para {year}")
+                return year
+            except (ValueError, IndexError):
+                pass
+
+        return None
+

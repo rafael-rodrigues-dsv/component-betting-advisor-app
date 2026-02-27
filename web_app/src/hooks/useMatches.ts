@@ -1,10 +1,10 @@
 /**
  * useMatches Hook
  *
- * Fluxo em 2 fases:
+ * Fluxo:
  * 1. FASE 1 (rápida): POST /preload/fetch → fixtures only → mostra jogos na tela
- * 2. FASE 2 (background): POST /preload/odds per date → odds paginadas, 1 data por vez
- *    Após cada data, re-busca GET /matches para atualizar odds na tela
+ * 2. FASE 2 (sob demanda): POST /preload/odds/league → odds por liga, quando selecionada no carrossel
+ *    Após concluir, re-busca GET /matches para atualizar odds na UI
  *
  * Botão refresh atualiza odds + status de uma partida específica.
  */
@@ -12,7 +12,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { matchesApi, preloadApi } from '../services/api';
 import type { Match, League, Bookmaker, Odds } from '../types';
 
-export type PeriodDays = 3 | 7 | 14;
+export type PeriodDays = 1 | 3 | 7;
 
 const LIVE_POLL_INTERVAL = 5000; // 5 segundos
 
@@ -27,10 +27,14 @@ export function useMatches() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodDays | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Controla cancelamento se o usuário trocar de período durante carregamento de odds
+  // Controla cancelamento se o usuário trocar de período/liga durante carregamento de odds
   const oddsAbortRef = useRef(false);
   // Guarda date_from e date_to do período atual
   const currentRangeRef = useRef<{ from: string; to: string } | null>(null);
+  // Guarda as datas do período atual (para usar na busca de odds por liga)
+  const currentDatesRef = useRef<string[]>([]);
+  // Ligas cujas odds já foram carregadas (evita re-buscar)
+  const oddsLoadedLeaguesRef = useRef<Set<string>>(new Set());
   // Live polling interval
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [livePolling, setLivePolling] = useState(false);
@@ -100,49 +104,59 @@ export function useMatches() {
   }, []);
 
   /**
-   * FASE 2: Carrega odds em background, data por data.
-   * Após cada data concluída, re-busca matches para atualizar odds na UI.
+   * Carrega odds de ligas específicas sob demanda.
+   * Chamado quando o usuário seleciona ligas no carrossel.
+   * Usa POST /preload/odds/league — busca odds só da liga+data (equilibrado).
+   *
+   * Apenas busca ligas que ainda não tiveram odds carregadas.
    */
-  const loadOddsInBackground = useCallback(async (dates: string[], dateFrom: string, dateTo: string) => {
-    if (dates.length === 0) return;
+  const loadOddsForLeagues = useCallback(async (leagueIds: string[]) => {
+    // Filtra ligas que já foram carregadas
+    const newLeagueIds = leagueIds.filter(id => !oddsLoadedLeaguesRef.current.has(id));
+    if (newLeagueIds.length === 0) return;
+
+    const range = currentRangeRef.current;
+    const dates = currentDatesRef.current;
+    if (!range || dates.length === 0) return;
 
     setLoadingOdds(true);
-    setOddsProgress({ loaded: 0, total: dates.length });
+    setOddsProgress({ loaded: 0, total: newLeagueIds.length });
     oddsAbortRef.current = false;
 
-    console.log(`📊 FASE 2 — Carregando odds para ${dates.length} datas em background...`);
+    console.log(`📊 Carregando odds para ${newLeagueIds.length} liga(s) sob demanda...`);
 
     let loaded = 0;
 
-    for (const dateStr of dates) {
+    for (const leagueId of newLeagueIds) {
       if (oddsAbortRef.current) {
         console.log('⚠️ Carregamento de odds cancelado');
         break;
       }
 
       try {
-        const result = await preloadApi.fetchOdds(dateStr);
+        const result = await preloadApi.fetchOddsByLeague(leagueId, dates);
         loaded++;
-        setOddsProgress({ loaded, total: dates.length });
+        setOddsProgress({ loaded, total: newLeagueIds.length });
 
         if (result.success) {
-          console.log(`  ✅ Odds ${dateStr}: ${result.total_odds} fixtures${result.from_cache ? ' (cache)' : ''}`);
+          oddsLoadedLeaguesRef.current.add(leagueId);
+          console.log(`  ✅ Odds liga ${leagueId}: ${result.total_odds} fixtures${result.from_cache ? ' (cache)' : ''}`);
         }
 
         // Re-busca matches para atualizar UI com odds
         if (!oddsAbortRef.current) {
-          await loadMatches(dateFrom, dateTo);
+          await loadMatches(range.from, range.to);
         }
       } catch (error) {
-        console.error(`  ❌ Erro odds ${dateStr}:`, error);
+        console.error(`  ❌ Erro odds liga ${leagueId}:`, error);
         loaded++;
-        setOddsProgress({ loaded, total: dates.length });
+        setOddsProgress({ loaded, total: newLeagueIds.length });
       }
     }
 
     setLoadingOdds(false);
     setOddsProgress(null);
-    console.log(`✅ Odds concluído: ${loaded}/${dates.length} datas`);
+    console.log(`✅ Odds concluído: ${loaded}/${newLeagueIds.length} ligas`);
   }, [loadMatches]);
 
   /**
@@ -181,22 +195,16 @@ export function useMatches() {
    * Inicia polling de jogos ao vivo a cada 5 segundos.
    */
   const startLivePolling = useCallback(() => {
-    // Para o anterior se existir
     if (liveIntervalRef.current) {
       clearInterval(liveIntervalRef.current);
     }
 
-    // Verifica se há jogos ao vivo nos matches carregados
     const hasLiveMatches = true; // Sempre inicia, o backend filtra
 
     if (hasLiveMatches) {
       console.log('🔴 Iniciando polling de jogos ao vivo (5s)...');
       setLivePolling(true);
-
-      // Primeira busca imediata
       pollLiveUpdates();
-
-      // Polling a cada 5 segundos
       liveIntervalRef.current = setInterval(pollLiveUpdates, LIVE_POLL_INTERVAL);
     }
   }, [pollLiveUpdates]);
@@ -223,10 +231,10 @@ export function useMatches() {
   }, []);
 
   /**
-   * Carrega dados para um período (3, 7 ou 14 dias).
+   * Carrega dados para um período (1, 3 ou 7 dias).
    *
-   * FASE 1: POST /preload/fetch → fixtures (rápido) → mostra jogos
-   * FASE 2: POST /preload/odds por data → odds (background) → atualiza odds na UI
+   * APENAS FASE 1: POST /preload/fetch → fixtures (rápido) → mostra jogos
+   * Odds são carregados sob demanda quando o usuário seleciona ligas no carrossel.
    */
   const fetchByPeriod = useCallback(async (days: PeriodDays) => {
     // Cancela odds background anterior e live polling
@@ -238,6 +246,8 @@ export function useMatches() {
     setDataLoaded(false);
     setLoadingOdds(false);
     setOddsProgress(null);
+    // Reset ligas com odds carregadas
+    oddsLoadedLeaguesRef.current = new Set();
 
     try {
       // === FASE 1: Fixtures (rápido) ===
@@ -265,23 +275,23 @@ export function useMatches() {
         setLeagues(leaguesData.leagues || []);
       }
 
-      // Carrega matches (sem odds ainda)
+      // Carrega matches (sem odds — odds sob demanda)
       currentRangeRef.current = { from: dateFrom, to: dateTo };
+      currentDatesRef.current = dates;
       await loadMatches(dateFrom, dateTo);
       await loadBookmakers();
 
       setDataLoaded(true);
       setPreloading(false);
 
-      // === FASE 2: Odds em background ===
-      loadOddsInBackground(dates, dateFrom, dateTo);
+      // NÃO carrega odds automaticamente — será sob demanda via loadOddsForLeagues
 
     } catch (error) {
       console.error('Erro ao carregar período:', error);
       setMatches([]);
       setPreloading(false);
     }
-  }, [loadMatches, loadBookmakers, loadOddsInBackground, stopLivePolling]);
+  }, [loadMatches, loadBookmakers, stopLivePolling]);
 
   return {
     matches,
@@ -296,6 +306,7 @@ export function useMatches() {
     dataLoaded,
     loadMatches,
     fetchByPeriod,
+    loadOddsForLeagues,
     updateMatchOdds,
     updateMatchOddsAndStatus,
     startLivePolling,

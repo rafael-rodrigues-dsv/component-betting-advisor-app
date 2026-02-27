@@ -27,6 +27,9 @@ class TicketBetResponse(BaseModel):
     final_score: Optional[str] = Field(None, description="Placar final do jogo (ex: '2 x 1')")
     status: Optional[str] = Field(None, description="Status da partida (ex: 'Not Started')")
     status_short: Optional[str] = Field(None, description="Status curto da partida (ex: 'NS', '1H', 'FT')")
+    elapsed: Optional[int] = Field(None, description="Minuto do jogo (ex: 45, 67)")
+    goals_home: Optional[int] = Field(None, description="Gols do time da casa")
+    goals_away: Optional[int] = Field(None, description="Gols do time visitante")
 
 
 class TicketResponse(BaseModel):

@@ -139,7 +139,17 @@ class TicketUpdaterService:
                 bet.status = status_data.get("long", status)
                 bet.status_short = status
 
-                # Só processa se a partida finalizou
+                # Atualiza minuto e placar (para todos os jogos, inclusive ao vivo)
+                bet.elapsed = status_data.get("elapsed")
+                goals = match_result.get("goals", {})
+                g_home = goals.get("home")
+                g_away = goals.get("away")
+                if g_home is not None:
+                    bet.goals_home = g_home
+                if g_away is not None:
+                    bet.goals_away = g_away
+
+                # Só processa resultado se a partida finalizou
                 if status not in ["FT", "AET", "PEN"]:  # Full Time, After Extra Time, Penalties
                     logger.debug(f"   ⏳ Partida {bet.match_id} ainda não finalizou (status: {status})")
                     all_finished = False
@@ -167,6 +177,9 @@ class TicketUpdaterService:
                 logger.error(f"❌ Erro ao processar aposta {bet.match_id}: {e}")
                 all_finished = False
 
+        # Sempre persiste dados das bets (placar ao vivo, minuto, status)
+        self.repository.update_bet_results(ticket.id, ticket.bets)
+
         # Se nem todas as partidas finalizaram, não atualiza status do ticket
         if not all_finished:
             logger.debug(f"⏳ Ticket {ticket.id} ainda tem partidas pendentes")
@@ -180,8 +193,7 @@ class TicketUpdaterService:
             ticket.status = TicketStatus.LOST
             logger.info(f"💔 Ticket {ticket.id} PERDEU")
 
-        # Atualiza no banco
-        self.repository.update_bet_results(ticket.id, ticket.bets)
+        # Atualiza status final no banco
         self.repository.update_status(ticket.id, ticket.status)
 
         return True

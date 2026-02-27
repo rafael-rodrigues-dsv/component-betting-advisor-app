@@ -116,6 +116,7 @@ class FixtureParser:
                 "name": league_data.get("name") or "",
                 "country": league_data.get("country") or "",
                 "logo": league_data.get("logo") or "",
+                "season": league_data.get("season"),
                 "type": "league"
             },
             "home_team": {

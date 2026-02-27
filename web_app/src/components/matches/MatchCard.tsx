@@ -91,7 +91,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           response.status,
           response.status_short,
           response.elapsed ?? null,
-          response.goals ?? null
+          response.goals ?? undefined
         );
       }
     } catch (error) {
@@ -103,8 +103,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
   return (
     <div
-      className={`match-card ${isSelected ? 'selected' : ''}`}
-      onClick={() => onSelect(match.id)}
+      className={`match-card ${isSelected ? 'selected' : ''} ${!hasOdds ? 'no-odds' : ''}`}
+      onClick={() => { if (hasOdds) onSelect(match.id); }}
+      title={!hasOdds ? 'Sem odds disponíveis — não pode ser selecionado para análise' : undefined}
     >
       <div className="match-header">
         <div className="match-league">

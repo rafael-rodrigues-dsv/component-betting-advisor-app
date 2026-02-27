@@ -2,8 +2,8 @@
 
 > Sistema de sugestão de bilhetes de apostas esportivas — API-Football integrada
 
-**Data:** 2026-02-26  
-**Versão:** 4.0.0  
+**Data:** 2026-02-27  
+**Versão:** 5.0.0  
 **Status:** ✅ Produção (API-Football Real, sem mocks)
 
 ---
@@ -34,13 +34,19 @@
 | Backend FastAPI | ✅ | Controllers com API-Football real |
 | API-Football | ✅ | Fixtures + Odds reais |
 | Cache SQLite | ✅ | Cache persistente com TTL + incremental |
-| Preload sob demanda | ✅ | 3, 7 ou 14 dias (apenas fixtures) |
-| Odds sob demanda | ✅ | Batch automático após preload + refresh individual |
+| Preload sob demanda | ✅ | Hoje, 3 ou 7 dias (apenas fixtures) |
+| Odds sob demanda por liga | ✅ | Carrega odds ao selecionar liga no carrossel |
 | Odds comparativas | ✅ | Tabela comparativa Bet365 vs Betano por partida |
 | Comparação de bilhetes | ✅ | Lado a lado Bet365 vs Betano com recomendação |
-| Análise de odds | ✅ | 4 estratégias + diversificação de mercados |
+| Análise de odds | ✅ | 3 estratégias + diversificação de mercados |
 | Seletor de estratégia | ✅ | Na tela de Previsões (re-analisa ao trocar) |
-| Bilhetes SQLite | ✅ | CRUD completo com status de partidas |
+| Resumo de previsões | ✅ | Exibe TODAS as odds de cada mercado por jogo |
+| Carrossel de ligas | ✅ | Multi-select, busca, filtro país/tipo, seção ao vivo |
+| Filtros avançados | ✅ | Status, odds, rodada, data, horário |
+| Bilhete editável (modal) | ✅ | Trocar mercado/resultado de cada aposta |
+| Acompanhamento ao vivo | ✅ | Placar, minuto, barra progresso, ganhando/perdendo |
+| Bilhetes SQLite | ✅ | CRUD completo com status + dados ao vivo |
+| Ligas ao vivo | ✅ | Seção no carrossel com jogos em andamento |
 | Timezone | ✅ | America/Sao_Paulo configurável |
 | Mocks | ❌ Removido | Sem dados mockados |
 
@@ -54,10 +60,15 @@
 │  ✅ Dados reais (jogos, odds, times, status ao vivo)                        │
 │  ✅ Comparação entre casas (Bet365, Betano) — por partida e por bilhete     │
 │  ✅ Identificação de value bets                                             │
-│  ✅ 4 estratégias personalizadas com diversificação                         │
+│  ✅ 3 estratégias personalizadas com diversificação                         │
 │  ✅ Troca de estratégia na tela de previsões (re-analisa mesmo jogos)       │
 │  ✅ Cache incremental em SQLite (fixtures e odds separados)                 │
-│  ✅ Odds carregadas sob demanda (batch + refresh individual)                │
+│  ✅ Odds carregadas sob demanda POR LIGA (ao selecionar no carrossel)       │
+│  ✅ Carrossel de ligas com multi-select, busca e filtros                    │
+│  ✅ Filtros avançados (status, odds, rodada, data, horário)                 │
+│  ✅ Bilhete editável com todas as opções de cada mercado                    │
+│  ✅ Acompanhamento ao vivo (placar, minuto, barra progresso)               │
+│  ✅ Seção de ligas ao vivo com jogos em andamento                           │
 │  ✅ Timezone correto (America/Sao_Paulo)                                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -99,14 +110,15 @@
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  📄 Pages                   ⚡ Contexts                 🧩 Components       │
-│  ├── Dashboard.tsx          ├── AppContext.tsx          ├── MatchCard.tsx   │
-│  ├── Matches.tsx            ├── MatchesContext.tsx      ├── MatchList.tsx   │
-│  ├── Predictions.tsx        ├── PredictionContext.tsx   ├── PredictionCard │
-│  └── Tickets.tsx            └── TicketContext.tsx       ├── BookmakerComp. │
-│                                                        ├── TicketBuilder  │
-│  🪝 Hooks                   🛠️ Services                └── TicketHistory  │
-│  └── useMatches.ts          ├── api/apiClient.ts                           │
-│     (preload + odds batch)  ├── api/apiEndpoints.ts                        │
+│  ├── Dashboard.tsx          ├── AppContext.tsx          ├── LeagueCarousel │
+│  ├── Matches.tsx            ├── MatchesContext.tsx      ├── MatchCard.tsx  │
+│  ├── Predictions.tsx        ├── BookmakerContext.tsx    ├── MatchList.tsx  │
+│  └── Tickets.tsx            ├── PredictionContext.tsx   ├── StatusMultiSel │
+│                             └── TicketContext.tsx       ├── PredictionCard │
+│  🪝 Hooks                                              ├── BookmakerComp. │
+│  └── useMatches.ts          🛠️ Services                ├── TicketBuilder  │
+│     (preload + odds/liga)   ├── api/apiClient.ts       ├── TicketModal   │
+│                             ├── api/apiEndpoints.ts    └── TicketHistory  │
 │                             ├── notificationService.ts                     │
 │                             └── storageService.ts                          │
 │                                                                             │
@@ -119,12 +131,15 @@
 │                                                                             │
 │  🌐 WEB LAYER (web/)                                                        │
 │  ├── controllers/                                                           │
-│  │   ├── match_controller.py      GET /matches, /leagues, /bookmakers      │
+│  │   ├── match_controller.py      GET /matches, /matches/live, /leagues    │
+│  │   │                            GET /bookmakers                          │
 │  │   │                            GET|POST /matches/{id}/odds              │
-│  │   │                            POST /matches/odds/batch                 │
 │  │   ├── prediction_controller.py POST /analyze (+ odds_by_bookmaker)      │
 │  │   ├── ticket_controller.py     GET|POST /tickets, /stats/dashboard      │
-│  │   └── preload_controller.py    POST /preload/fetch, GET /preload/status │
+│  │   │                            POST /tickets/update-results             │
+│  │   │                            POST /tickets/{id}/update-result         │
+│  │   └── preload_controller.py    POST /preload/fetch, /odds/league        │
+│  │                                GET /preload/status                      │
 │  ├── dtos/                        Requests + Responses (Pydantic)          │
 │  └── mappers/                     Domain → DTO conversion                  │
 │                                                                             │
@@ -132,15 +147,15 @@
 │  └── services/                                                              │
 │      ├── match_application_service.py   Lê cache, filtra ativos            │
 │      ├── prediction_application_service.py  OddsAnalyzer + previsões       │
-│      ├── preload_service.py             Cache incremental de fixtures       │
+│      ├── preload_service.py             Cache incremental + odds por liga   │
 │      ├── ticket_application_service.py  CRUD bilhetes                      │
-│      └── ticket_updater_service.py      Atualiza resultados + status       │
+│      └── ticket_updater_service.py      Atualiza resultados + dados ao vivo│
 │                                                                             │
 │  🧠 DOMAIN LAYER (domain/)                                                  │
 │  ├── constants/constants.py     Ligas, status, thresholds                  │
 │  ├── enums/                     MarketType, Strategy, TicketStatus, etc.   │
 │  ├── interfaces/                Contratos abstratos (ABC)                  │
-│  ├── models/                    Match, Odds, Ticket, Bet (+ status fields) │
+│  ├── models/                    Match, Odds, Ticket, Bet (+ live fields)   │
 │  ├── services/odds_analyzer.py  Lógica de estratégias e value bets        │
 │  └── utils/                     Validators, calculators, formatters        │
 │                                                                             │
@@ -152,7 +167,7 @@
 │  │   └── repositories/            TicketRepository                         │
 │  └── external/api_football/                                                 │
 │      ├── client.py                HTTP client (httpx)                      │
-│      ├── service.py               Fixtures + Odds + Season resolution      │
+│      ├── service.py               Fixtures + Odds + Live + Season          │
 │      └── parsers/                 fixture_parser, odds_parser              │
 │                                                                             │
 │  ⚙️ CONFIG (config/)                                                        │
@@ -174,63 +189,63 @@ component-betting-advisor-app/
 │   └── postman/                        # Collections Postman
 │
 ├── web_api/                            # 🔙 BACKEND
-│   ├── requirements.txt                # fastapi, httpx, pydantic, tzdata
+│   ├── requirements.txt
 │   ├── start.bat / start.sh
 │   ├── data/
 │   │   ├── cache.db                    # SQLite cache (fixtures, odds, seasons)
-│   │   └── tickets.db                  # SQLite tickets (+ status partidas)
+│   │   └── tickets.db                  # SQLite tickets (+ live fields)
 │   ├── scripts/
-│   │   ├── init_cache.py               # Inicializa cache.db
-│   │   └── init_database.py            # Inicializa tickets.db
+│   │   ├── init_cache.py
+│   │   └── init_database.py
 │   ├── static/escudos/                 # 40+ escudos PNG locais
 │   └── src/
-│       ├── main.py                     # FastAPI app + startup
+│       ├── main.py
 │       ├── config/
-│       │   ├── .env                    # API_FOOTBALL_KEY, TIMEZONE, etc.
-│       │   └── settings.py             # Pydantic Settings + today()/now()
+│       │   ├── .env
+│       │   └── settings.py
 │       ├── web/
 │       │   ├── controllers/            # match, prediction, ticket, preload
 │       │   ├── dtos/                   # requests/ + responses/
-│       │   └── mappers/                # match_mapper, prediction_mapper, etc.
-│       ├── application/services/       # Lógica de aplicação
+│       │   └── mappers/
+│       ├── application/services/
 │       │   ├── match_application_service.py
 │       │   ├── prediction_application_service.py
-│       │   ├── preload_service.py
+│       │   ├── preload_service.py      # Inclui preload de odds por liga
 │       │   ├── ticket_application_service.py
 │       │   └── ticket_updater_service.py
 │       ├── domain/
-│       │   ├── constants/constants.py  # ACTIVE_STATUSES, MAIN_LEAGUES, etc.
-│       │   ├── enums/                  # Strategy, MarketType, TicketStatus...
-│       │   ├── interfaces/             # ABC abstratos
-│       │   ├── models/                 # Match, Team, Odds, Ticket, Bet, Prediction
+│       │   ├── constants/constants.py
+│       │   ├── enums/
+│       │   ├── interfaces/
+│       │   ├── models/                 # Bet inclui elapsed, goals_home, goals_away
 │       │   ├── services/odds_analyzer.py
 │       │   └── utils/
 │       └── infrastructure/
 │           ├── cache/sqlite_cache_manager.py
 │           ├── database/
-│           │   ├── connection.py       # Tabelas: tickets, bets (+ status fields)
+│           │   ├── connection.py       # Migração automática de colunas live
 │           │   └── repositories/ticket_repository.py
 │           └── external/api_football/
-│               ├── client.py           # httpx client
-│               ├── service.py          # get_fixtures, get_odds, get_fixture_result
+│               ├── client.py
+│               ├── service.py          # get_fixtures, get_odds, get_live, etc.
 │               └── parsers/
-│                   ├── fixture_parser.py
-│                   └── odds_parser.py
 │
 └── web_app/                            # ⚛️ FRONTEND
     ├── package.json
-    ├── vite.config.ts                  # Proxy /api → localhost:8000
+    ├── vite.config.ts
     ├── tsconfig.json
     └── src/
         ├── Main.tsx / App.tsx
         ├── components/
         │   ├── common/     Header, Loading
         │   ├── dashboard/  StatsCard, QuickGuide
-        │   ├── matches/    MatchList, MatchCard
-        │   ├── predictions/ BookmakerComparison, PredictionCard, ConfidenceMeter
-        │   └── tickets/    TicketBuilder, TicketHistory
-        ├── contexts/       App, Matches, Prediction, Ticket
-        ├── hooks/          useMatches.ts (preload + odds batch)
+        │   ├── matches/    LeagueCarousel, MatchList, MatchCard,
+        │   │               StatusMultiSelect, LeagueMultiSelect
+        │   ├── predictions/ BookmakerComparison, PredictionCard,
+        │   │                ConfidenceMeter, PredictionPanel
+        │   └── tickets/    TicketBuilder, TicketModal, TicketHistory
+        ├── contexts/       App, Bookmaker, Matches, Prediction, Ticket
+        ├── hooks/          useMatches.ts
         ├── pages/          Dashboard, Matches, Predictions, Tickets
         ├── services/       api/, notificationService, storageService
         ├── styles/         globals.css
@@ -243,15 +258,12 @@ component-betting-advisor-app/
 
 ### Config (`config/settings.py`)
 
-Pydantic Settings carregando `.env`:
-
 ```python
 class Settings(BaseSettings):
     API_FOOTBALL_KEY: Optional[str] = None
     API_FOOTBALL_BASE_URL: str = "https://v3.football.api-sports.io"
     TIMEZONE: str = "America/Sao_Paulo"
     SUPPORTED_BOOKMAKERS: str = "bet365,betano"
-    MAIN_LEAGUES: str = "71,73,39,140,78,61,135"
     CACHE_TTL_FIXTURES: int = 21600   # 6h
     CACHE_TTL_ODDS: int = 1800        # 30min
 
@@ -264,46 +276,40 @@ class Settings(BaseSettings):
 
 ### Web Layer (`web/controllers/`)
 
-Controllers HTTP — delegam para Application Services:
-
 | Controller | Responsabilidade |
 |-----------|-----------------|
-| `match_controller` | Listar jogos, odds, leagues, bookmakers |
+| `match_controller` | Listar jogos, odds, leagues, bookmakers, jogos ao vivo |
 | `prediction_controller` | Analisar jogos com OddsAnalyzer + `odds_by_bookmaker` |
-| `ticket_controller` | CRUD bilhetes + dashboard stats |
-| `preload_controller` | Disparar preload sob demanda |
+| `ticket_controller` | CRUD bilhetes + dashboard stats + atualização de resultados |
+| `preload_controller` | Preload sob demanda + odds por liga |
 
 ### Application Layer (`application/services/`)
 
 | Service | Responsabilidade |
 |---------|-----------------|
-| `preload_service` | Cache incremental de fixtures (3→7→14 dias), SEM odds |
-| `match_application_service` | Lê cache, filtra partidas ativas, odds filtradas por bookmaker |
-| `prediction_application_service` | Usa OddsAnalyzer para gerar previsões + retorna `odds_by_bookmaker` |
+| `preload_service` | Cache incremental de fixtures (Hoje→3→7 dias) + odds por liga |
+| `match_application_service` | Lê cache, filtra partidas ativas, atualiza dados ao vivo |
+| `prediction_application_service` | OddsAnalyzer para previsões + `odds_by_bookmaker` |
 | `ticket_application_service` | CRUD de bilhetes no SQLite |
-| `ticket_updater_service` | Busca resultados reais na API-Football + atualiza status/status_short |
+| `ticket_updater_service` | Busca resultados reais + atualiza status/placar/minuto ao vivo |
 
 ### Domain Layer (`domain/`)
 
 | Componente | Descrição |
 |-----------|-----------|
-| `constants.py` | ACTIVE_STATUSES, MAIN_LEAGUES, LEAGUE_NAMES, etc. |
-| `enums/` | BettingStrategy, MarketType, TicketStatus, RiskLevel |
-| `models/` | Match, Team, League, Odds, Prediction, Ticket, Bet |
-| `models/bet_model.py` | Inclui `status` e `status_short` (status da partida) |
+| `constants.py` | ACTIVE_STATUSES, etc. |
+| `enums/` | BettingStrategy (3: CONSERVATIVE, BALANCED, AGGRESSIVE), MarketType, TicketStatus |
+| `models/bet_model.py` | `status`, `status_short`, `elapsed`, `goals_home`, `goals_away` |
 | `services/odds_analyzer.py` | Lógica de estratégias e value bets com diversificação |
-| `utils/` | Validators, calculators, formatters |
 
 ### Infrastructure Layer (`infrastructure/`)
 
 | Componente | Descrição |
 |-----------|-----------|
-| `cache/sqlite_cache_manager.py` | Cache SQLite com TTL (get/set/delete_by_prefix) |
-| `database/connection.py` | SQLite para tickets (inclui migração de colunas status) |
-| `database/repositories/` | TicketRepository (CRUD com status/status_short nas bets) |
-| `external/api_football/client.py` | HTTP client httpx |
-| `external/api_football/service.py` | get_fixtures, get_odds, get_fixture_result, _get_current_season |
-| `external/api_football/parsers/` | fixture_parser (com timezone local), odds_parser |
+| `cache/sqlite_cache_manager.py` | Cache SQLite com TTL |
+| `database/connection.py` | SQLite com migração automática de colunas live |
+| `database/repositories/` | TicketRepository (CRUD com campos live nas bets) |
+| `external/api_football/service.py` | get_fixtures, get_odds, get_fixture_result, get_live_fixtures |
 
 ---
 
@@ -311,14 +317,13 @@ Controllers HTTP — delegam para Application Services:
 
 ### Hook Principal: `useMatches.ts`
 
-Gerencia todo o fluxo de carregamento:
-
 ```typescript
 export function useMatches() {
   // 1. fetchByPeriod(days) — POST /preload/fetch + GET /matches
-  // 2. loadAllOdds(matches) — POST /matches/odds/batch (chunks de 10)
-  // 3. updateMatchOdds(id, odds) — atualiza state individual
-  // 4. updateMatchOddsAndStatus(id, odds, status, statusShort) — refresh individual
+  // 2. loadOddsByLeague(leagueId) — POST /preload/odds/league
+  // 3. fetchLiveMatches() — GET /matches/live (polling)
+  // 4. updateMatchOdds(id, odds) — atualiza state individual
+  // 5. updateMatchOddsAndStatus(id, odds, status, statusShort) — refresh
 }
 ```
 
@@ -326,34 +331,44 @@ export function useMatches() {
 
 | Context | Responsabilidade |
 |---------|-----------------|
-| `AppContext` | Tab ativa, liga selecionada |
-| `MatchesContext` | Matches carregados, período, filtros |
-| `PredictionContext` | Previsões, estratégia atual, re-análise, lastMatchIds |
-| `TicketContext` | Pré-bilhete, bilhetes criados |
-
-> **Nota:** `BookmakerContext` foi removido. A seleção de casa de apostas agora acontece na comparação de bilhetes (Predictions).
+| `AppContext` | Tab ativa, estado global |
+| `BookmakerContext` | Lista de bookmakers, seleção, nome por ID |
+| `MatchesContext` | Matches, período, ligas, filtros |
+| `PredictionContext` | Previsões, estratégia, re-análise |
+| `TicketContext` | Pré-bilhete, bilhetes, modal, edição |
 
 ### Componentes Principais
 
 | Componente | Descrição |
 |-----------|-----------|
-| `MatchList` | Seletor de período, filtro por liga, select all/by day, expand/collapse |
-| `MatchCard` | Badge de status, tabela comparativa de odds, botão refresh 🔄 |
-| `BookmakerComparison` | **Novo** — 2 pré-bilhetes lado a lado (Bet365 vs Betano) com recomendação |
-| `PredictionCard` | Mercado, confiança, value bet %, recomendação (usado no resumo compacto) |
-| `TicketBuilder` | Bilhete editável, stake, retorno potencial, badge da casa de apostas |
-| `TicketHistory` | Lista de bilhetes com badges de status das partidas |
+| `LeagueCarousel` | Carrossel multi-select com busca, filtro país/tipo (Liga/Copa), seção ao vivo |
+| `MatchList` | Seletor de período (Hoje/3/7 dias), filtros avançados, expand/collapse |
+| `MatchCard` | Badge de status, tabela comparativa de odds. Sem odds = desabilitado |
+| `StatusMultiSelect` | Multi-select agrupado (Ao Vivo, Programados, Encerrados) |
+| `BookmakerComparison` | 2 pré-bilhetes lado a lado com recomendação |
+| `TicketModal` | Modal de criação/edição — troca mercado/resultado entre todas as alternativas |
+| `TicketHistory` | Acompanhamento rico: placar, minuto, barra progresso, ganhando/perdendo |
+
+### Filtros Avançados
+
+| Filtro | Descrição |
+|--------|-----------|
+| 📊 Status | Multi-select: Ao Vivo, Não Iniciado, Encerrado |
+| 💰 Com/Sem Odds | Jogos com odds carregadas |
+| 🔄 Rodada | Fase do campeonato |
+| 📅 Data | Dia específico dentro do período |
+| 🕐 Horário | Turno (manhã, tarde, noite) |
 
 ### Fluxo de Telas
 
 ```
-┌────────────┐    ┌─────────────────┐    ┌──────────────────────┐    ┌────────────┐
-│  Dashboard │    │      Jogos      │    │     Previsões        │    │  Bilhetes  │
-│  stats     │    │  Período 3/7/14 │    │  Estratégia (troca)  │    │  Histórico │
-│            │    │  Filtro Liga    │───▶│  Resumo compacto     │───▶│  Status    │
-│            │    │  Select All/Day │    │  Comparação casas    │    │  Resultado │
-│            │    │  Odds comparar  │    │  Bilhete editável    │    │            │
-└────────────┘    └─────────────────┘    └──────────────────────┘    └────────────┘
+┌────────────┐    ┌─────────────────────┐    ┌───────────────────┐    ┌────────────────┐
+│  Dashboard │    │       Jogos         │    │    Previsões      │    │    Bilhetes     │
+│  stats     │    │  Período Hoje/3/7   │    │  3 Estratégias    │    │  Histórico      │
+│            │    │  Carrossel de ligas  │───▶│  Todas as odds    │───▶│  Placar ao vivo │
+│            │    │  Filtros avançados   │    │  Comparação casas │    │  Minuto/Barra   │
+│            │    │  Odds por liga       │    │  Modal editável   │    │  Ganho/Perdendo │
+└────────────┘    └─────────────────────┘    └───────────────────┘    └────────────────┘
 ```
 
 ---
@@ -365,53 +380,32 @@ export function useMatches() {
 | Endpoint API-Football | Uso no Sistema |
 |---|---|
 | `GET /fixtures?league={id}&date={date}&season={year}` | Buscar jogos por liga e data |
-| `GET /odds?fixture={id}` | Buscar odds de uma partida |
+| `GET /odds?league={id}&date={date}&page={n}` | Buscar odds por liga/data (bulk) |
 | `GET /fixtures?id={id}` | Resultado/status de partida |
+| `GET /fixtures?live=all` | Buscar jogos ao vivo |
 | `GET /leagues?id={id}&current=true` | Resolver season atual da liga |
+
+### Carregamento de Odds — Por Liga
+
+Em vez de buscar por fixture individual (1 request por jogo), busca por **liga + data** (bulk):
+
+```
+POST /api/v1/preload/odds/league
+Body: { "league_id": 71 }
+
+→ Backend: GET /odds?league=71&date=2026-02-27 (paginado)
+→ Retorna todas as odds de todos os jogos da liga na data
+→ Muito mais eficiente (1 request por liga/data vs N por fixture)
+```
 
 ### Season Resolution
 
-A API-Football requer o parâmetro `season` para fixtures. O sistema resolve automaticamente:
 - Busca `GET /leagues?id={id}&current=true`
 - Cacheia por 7 dias (`season:{league_id}`)
-- Ligas europeias: ano de início (ex: 2025 para 2025/2026)
-- Ligas brasileiras: ano corrente (ex: 2026)
-
-### Filtro de Bookmakers
-
-O `odds_parser` retorna odds de todas as casas. O `match_application_service` filtra apenas as casas em `SUPPORTED_BOOKMAKERS` (padrão: `bet365,betano`), definido em `config/settings.py`.
 
 ---
 
 ## 💾 Sistema de Cache
-
-### SQLite Cache (`data/cache.db`)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Tabela: cache                                                    │
-├──────────────────┬──────────────┬────────────────────────────────┤
-│ key (PK)         │ value (JSON) │ expires_at (TIMESTAMP)         │
-├──────────────────┼──────────────┼────────────────────────────────┤
-│ fixtures:71:...  │ [...]        │ 2026-02-26 23:00:00           │
-│ odds:1234567     │ {...}        │ 2026-02-26 17:30:00           │
-│ season:71        │ 2026         │ 2026-03-05 14:00:00           │
-│ preload:last_date│ "2026-02-26" │ 2026-02-27 14:00:00           │
-│ preload:last_days│ 7            │ 2026-02-27 14:00:00           │
-└──────────────────┴──────────────┴────────────────────────────────┘
-```
-
-### Cache Incremental (Preload)
-
-```python
-# PreloadService.preload_fixtures()
-1. _get_cached_period() → ex: 3 (já tem 3 dias cacheados hoje)
-2. Se pedir 7 dias e já tem 3 → busca apenas dias 4-7
-3. Se pedir 3 dias e já tem 7 → não faz nada (cache cobre)
-4. Se dia mudou → limpa cache antigo, busca tudo de novo
-```
-
-**Importante:** O preload carrega APENAS fixtures (jogos). Odds são carregadas separadamente via batch automático ou refresh individual.
 
 ### TTLs
 
@@ -426,18 +420,7 @@ O `odds_parser` retorna odds de todas as casas. O `match_application_service` fi
 
 ## ⏰ Timezone
 
-O sistema usa `zoneinfo.ZoneInfo('America/Sao_Paulo')` para todos os cálculos de data:
-
-- `settings.today()` → data de hoje na timezone configurada
-- `settings.now()` → datetime atual na timezone configurada
-- `fixture_parser.py` → converte timestamps da API para timezone local
-
-Configurável via `.env`:
-```
-TIMEZONE=America/Sao_Paulo
-```
-
-Dependência: `tzdata` (necessário no Windows).
+`zoneinfo.ZoneInfo('America/Sao_Paulo')` — configurável via `.env` (`TIMEZONE`).
 
 ---
 
@@ -445,112 +428,46 @@ Dependência: `tzdata` (necessário no Windows).
 
 | Endpoint | Método | Descrição |
 |----------|--------|-----------|
-| `/api/v1/preload/fetch?days=N` | POST | Pré-carrega fixtures (3, 7, 14 dias) |
+| `/api/v1/preload/fetch?days=N` | POST | Pré-carrega fixtures (1, 3, 7 dias) |
 | `/api/v1/preload/status` | GET | Status do cache |
-| `/api/v1/matches` | GET | Lista jogos (query: date_from, date_to, league_id) |
-| `/api/v1/matches/{id}/odds` | GET | Odds de uma partida (cache ou API) |
-| `/api/v1/matches/{id}/odds/refresh` | POST | Força refresh de odds + status |
-| `/api/v1/matches/odds/batch` | POST | Odds em lote (body: fixture_ids) |
-| `/api/v1/leagues` | GET | Lista campeonatos disponíveis |
-| `/api/v1/bookmakers` | GET | Lista casas de apostas suportadas |
-| `/api/v1/analyze` | POST | Analisa jogos (body: match_ids, strategy) — retorna `odds_by_bookmaker` |
-| `/api/v1/tickets` | GET | Lista bilhetes (com status das partidas) |
-| `/api/v1/tickets` | POST | Cria bilhete |
-| `/api/v1/tickets/{id}` | GET | Detalhes de um bilhete |
-| `/api/v1/tickets/{id}` | DELETE | Deleta bilhete |
-| `/api/v1/tickets/stats/dashboard` | GET | Estatísticas do dashboard |
-| `/api/v1/tickets/update-results` | POST | Atualiza resultados reais (+ status_short) |
+| `/api/v1/preload/odds` | POST | Odds em lote (body: fixture_ids) |
+| `/api/v1/preload/odds/league` | POST | Odds por liga (body: league_id) |
+| `/api/v1/matches` | GET | Lista jogos |
+| `/api/v1/matches/live` | GET | Jogos ao vivo |
+| `/api/v1/matches/{id}/odds` | GET | Odds de uma partida |
+| `/api/v1/matches/{id}/odds/refresh` | POST | Refresh odds + status |
+| `/api/v1/leagues` | GET | Campeonatos disponíveis |
+| `/api/v1/bookmakers` | GET | Casas de apostas |
+| `/api/v1/analyze` | POST | Analisa jogos |
+| `/api/v1/tickets` | GET/POST | Lista / Cria bilhete |
+| `/api/v1/tickets/{id}` | GET/DELETE | Detalhes / Deleta |
+| `/api/v1/tickets/{id}/update-result` | POST | Atualiza resultado de um bilhete |
+| `/api/v1/tickets/stats/dashboard` | GET | Estatísticas |
+| `/api/v1/tickets/update-results` | POST | Atualiza todos os pendentes |
 | `/health` | GET | Health check |
 
 ---
 
 ## ⚙️ Configurações
 
-### `.env` (web_api/src/config/.env)
+### `.env`
 
 ```bash
-# API-Football (obrigatório)
 API_FOOTBALL_KEY=sua_chave_aqui
 API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
-
-# Timezone
 TIMEZONE=America/Sao_Paulo
-
-# Casas de apostas
 SUPPORTED_BOOKMAKERS=bet365,betano
-
-# Ligas principais
-MAIN_LEAGUES=71,73,39,140,78,61,135
-
-# Cache TTLs (segundos)
 CACHE_TTL_FIXTURES=21600
 CACHE_TTL_ODDS=1800
 CACHE_TTL_LEAGUES=604800
-
-# Servidor
 HOST=0.0.0.0
 PORT=8000
-DEBUG=false
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-### `requirements.txt`
-
-```
-fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
-pydantic>=2.10.0
-pydantic-settings>=2.0.0
-python-dotenv>=1.0.0
-httpx>=0.28.0
-tzdata>=2024.1
-```
-
-### Vite Proxy (`vite.config.ts`)
-
-```typescript
-export default defineConfig({
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true }
-    }
-  }
-})
-```
-
----
-
-## 🖼️ Logos dos Times
-
-Estratégia **Local First, API Fallback**:
-
-1. `fixture_parser` verifica se existe logo local em `static/escudos/`
-2. Se encontrar → `{ url: "/static/escudos/flamengo.png", type: "LOCAL" }`
-3. Se não → `{ url: "https://media.api-sports.io/...", type: "EXT" }`
-
-Frontend trata transparentemente:
-```typescript
-const getTeamLogoUrl = (logo: Logo): string => {
-  if (logo.type === 'EXT') return logo.url;
-  return `http://localhost:8000${logo.url}`;
-};
 ```
 
 ---
 
 ## 📐 Banco de Dados (tickets.db)
-
-### Tabela `tickets`
-
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | TEXT PK | UUID do bilhete |
-| name | TEXT | Nome do bilhete |
-| stake | REAL | Valor apostado |
-| bookmaker_id | TEXT | Casa de apostas (bet365, betano) |
-| status | TEXT | PENDING, WON, LOST |
-| created_at | TIMESTAMP | Data de criação |
 
 ### Tabela `bets`
 
@@ -563,11 +480,13 @@ const getTeamLogoUrl = (logo: Logo): string => {
 | away_team | TEXT | Nome do visitante |
 | league | TEXT | Nome da liga |
 | market | TEXT | MATCH_WINNER, OVER_UNDER, BTTS |
-| predicted_outcome | TEXT | HOME, DRAW, AWAY, OVER_2.5, etc. |
+| predicted_outcome | TEXT | HOME, DRAW, AWAY, OVER, UNDER, YES, NO |
 | odds | REAL | Odd da aposta |
 | confidence | REAL | Confiança (0.0–1.0) |
 | result | TEXT | WON, LOST, null |
 | final_score | TEXT | "2 x 1" ou null |
 | status | TEXT | Status longo da partida |
 | status_short | TEXT | NS, 1H, HT, 2H, FT, etc. |
-
+| elapsed | INTEGER | Minuto do jogo (ex: 45, 67, 90) |
+| goals_home | INTEGER | Gols do time da casa |
+| goals_away | INTEGER | Gols do time visitante |
