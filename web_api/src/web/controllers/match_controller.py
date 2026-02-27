@@ -158,7 +158,8 @@ async def get_leagues():
             name=league["name"],
             country=league["country"],
             logo=league["logo"],
-            type=league["type"]
+            type=league["type"],
+            has_statistics_fixtures=league.get("has_statistics_fixtures", False)
         )
         for league in leagues_data
     ]

@@ -7,7 +7,7 @@
  * Ao montar, carrega automaticamente os jogos de Hoje (1 dia)
  * para que o Dashboard já exiba dados sem interação do usuário.
  */
-import React, { createContext, useContext, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useMatches, type PeriodDays } from '../hooks/useMatches';
 import type { Match, League, Bookmaker, Odds } from '../types';
 
@@ -35,12 +35,12 @@ const MatchesContext = createContext<MatchesContextType | undefined>(undefined);
 
 export const MatchesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const matchesHook = useMatches();
-  const didAutoLoad = useRef(false);
 
   // Auto-carrega jogos de Hoje ao iniciar o app
   useEffect(() => {
-    if (!didAutoLoad.current) {
-      didAutoLoad.current = true;
+    // selectedPeriod é null apenas quando nunca foi carregado
+    if (matchesHook.selectedPeriod === null) {
+      console.log('🚀 Auto-load: carregando jogos de Hoje...');
       matchesHook.fetchByPeriod(1);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

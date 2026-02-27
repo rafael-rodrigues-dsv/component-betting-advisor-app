@@ -207,9 +207,19 @@ export const LeagueCarousel: React.FC<LeagueCarouselProps> = ({
     return leagues.filter(l => selectedLeagueIds.has(l.id));
   }, [leagues, selectedLeagueIds]);
 
-  // Selecionar todas as ligas visíveis no carrossel filtrado
+  // Selecionar todas as ligas (filtradas ou todas)
   const selectAllVisible = () => {
     const newIds = filteredLeagues
+      .filter(l => !selectedLeagueIds.has(l.id))
+      .map(l => l.id);
+    if (newIds.length > 0) {
+      onSelectMultiple(newIds);
+    }
+  };
+
+  // Selecionar todas as ligas ao vivo
+  const selectAllLive = () => {
+    const newIds = liveLeagues
       .filter(l => !selectedLeagueIds.has(l.id))
       .map(l => l.id);
     if (newIds.length > 0) {
@@ -306,6 +316,11 @@ export const LeagueCarousel: React.FC<LeagueCarouselProps> = ({
             <span className="league-carousel-section-hint">
               {liveLeagues.length} {liveLeagues.length === 1 ? 'liga com jogo' : 'ligas com jogos'} em andamento
             </span>
+            {liveLeagues.some(l => !selectedLeagueIds.has(l.id)) && (
+              <button className="league-carousel-select-all-btn" onClick={selectAllLive}>
+                ☑️ Selecionar todas
+              </button>
+            )}
           </div>
 
           <div className="league-carousel-track-wrapper">
@@ -356,9 +371,9 @@ export const LeagueCarousel: React.FC<LeagueCarouselProps> = ({
             }
           </span>
           <span className="league-carousel-section-hint">{filteredLeagues.length} ligas</span>
-          {filteredLeagues.length > 0 && filteredLeagues.length <= 50 && (
+          {filteredLeagues.length > 0 && filteredLeagues.some(l => !selectedLeagueIds.has(l.id)) && (
             <button className="league-carousel-select-all-btn" onClick={selectAllVisible}>
-              ☑️ Selecionar todas visíveis
+              ☑️ Selecionar todas{searchTerm || typeFilter !== 'all' ? ' filtradas' : ''}
             </button>
           )}
         </div>

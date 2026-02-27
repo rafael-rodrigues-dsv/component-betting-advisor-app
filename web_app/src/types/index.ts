@@ -28,6 +28,8 @@ export interface League {
   country: string;
   logo: string;
   type: 'league' | 'cup';
+  /** Liga possui estatísticas de fixtures ao vivo (coverage da API-Football) */
+  has_statistics_fixtures?: boolean;
 }
 
 export interface Bookmaker {

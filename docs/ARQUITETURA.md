@@ -47,6 +47,7 @@
 | Acompanhamento ao vivo | ✅ | Placar, minuto, barra progresso, ganhando/perdendo |
 | Bilhetes SQLite | ✅ | CRUD completo com status + dados ao vivo |
 | Ligas ao vivo | ✅ | Seção no carrossel com jogos em andamento |
+| Coverage de estatísticas | ✅ | Badge 📊 em ligas com `statistics_fixtures` (API-Football) |
 | Timezone | ✅ | America/Sao_Paulo configurável |
 | Mocks | ❌ Removido | Sem dados mockados |
 
@@ -384,6 +385,7 @@ export function useMatches() {
 | `GET /fixtures?id={id}` | Resultado/status de partida |
 | `GET /fixtures?live=all` | Buscar jogos ao vivo |
 | `GET /leagues?id={id}&current=true` | Resolver season atual da liga |
+| `GET /leagues?season={year}` | Coverage de ligas (`statistics_fixtures`) |
 
 ### Carregamento de Odds — Por Liga
 
@@ -414,6 +416,7 @@ Body: { "league_id": 71 }
 | Fixtures | 6h | Pouca mudança durante o dia |
 | Odds | 30min | Mudam frequentemente |
 | Season | 7 dias | Não muda durante a temporada |
+| Leagues Coverage | 7 dias | Coverage não muda durante a temporada |
 | Preload meta | 24h | Controle de cache incremental |
 
 ---

@@ -65,10 +65,57 @@ class PreloadService:
                     "country": league_data.get("country", ""),
                     "logo": league_data.get("logo", ""),
                     "type": league_data.get("type", "league"),
+                    "has_statistics_fixtures": False,  # Default, será enriquecido depois
                 })
         leagues.sort(key=lambda l: (l["country"], l["name"]))
         logger.info(f"🏆 {len(leagues)} ligas distintas extraídas dos fixtures")
         return leagues
+
+    async def _enrich_leagues_with_coverage(self, leagues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filtra ligas mantendo APENAS as que possuem statistics_fixtures: true.
+
+        Busca GET /leagues?season={year} — cacheia por 7 dias.
+        Busca SEMPRE season atual E anterior para cobrir todas as ligas:
+        - Ligas brasileiras: season = ano corrente (ex: 2026)
+        - Ligas europeias: season = ano anterior (ex: 2025 para 2025/2026)
+
+        Ligas sem statistics_fixtures são REMOVIDAS (não entram no cache).
+        """
+        try:
+            season = settings.today().year
+
+            # Busca ambas as seasons para máxima cobertura
+            coverage_current = await self.api_service.get_leagues_coverage(season)
+            coverage_previous = await self.api_service.get_leagues_coverage(season - 1)
+
+            # Merge: prioridade para season atual, fallback para anterior
+            coverage_map = {**coverage_previous, **coverage_current}
+
+            filtered_leagues = []
+            removed = 0
+
+            for league in leagues:
+                lid = league["id"]
+                cov = coverage_map.get(lid)
+
+                if cov and cov.get("statistics_fixtures", False):
+                    league["has_statistics_fixtures"] = True
+                    # Atualiza type da API (mais preciso que o fallback do fixture)
+                    if cov.get("type"):
+                        league["type"] = cov["type"]
+                    filtered_leagues.append(league)
+                else:
+                    removed += 1
+
+            logger.info(
+                f"📊 Coverage filtrado: {len(filtered_leagues)} ligas com statistics_fixtures "
+                f"(removidas: {removed}, mapa total: {len(coverage_map)})"
+            )
+            return filtered_leagues
+        except Exception as e:
+            logger.error(f"⚠️ Erro ao filtrar coverage: {e} — retornando todas as ligas")
+            return leagues
 
     # ========================================
     # FASE 1: Fixtures (rápido)
@@ -130,8 +177,9 @@ class PreloadService:
                 if cached_fixtures:
                     all_loaded_fixtures.extend(cached_fixtures)
 
-        # Extrai ligas e salva no cache
+        # Extrai ligas e enriquece com coverage
         dynamic_leagues = self._extract_leagues(all_loaded_fixtures)
+        dynamic_leagues = await self._enrich_leagues_with_coverage(dynamic_leagues)
         self.cache.set("leagues:dynamic", dynamic_leagues, ttl_seconds=86400)
 
         # Marca período cacheado

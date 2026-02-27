@@ -23,6 +23,7 @@ class LeagueResponse(BaseModel):
     country: str
     logo: str  # Mantém como string (emoji)
     type: str  # "league" ou "cup"
+    has_statistics_fixtures: bool = False  # Coverage: liga tem estatísticas de fixtures ao vivo
 
 
 class BookmakerResponse(BaseModel):

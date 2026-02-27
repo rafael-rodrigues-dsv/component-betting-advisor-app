@@ -261,6 +261,69 @@ class APIFootballService:
         return None
 
     # ========================================
+    # Leagues coverage (statistics_fixtures)
+    # ========================================
+
+    async def get_leagues_coverage(self, season: int = None) -> Dict[str, Dict[str, Any]]:
+        """
+        Busca coverage de TODAS as ligas para uma season.
+
+        Usa GET /leagues?season={year} — retorna coverage.fixtures.statistics_fixtures.
+        Cacheado por 7 dias (não muda durante a temporada).
+
+        Args:
+            season: Ano da temporada (default: ano atual)
+
+        Returns:
+            Dict[league_id_str, { statistics_fixtures: bool, events: bool, lineups: bool, ... }]
+        """
+        if not season:
+            season = settings.today().year
+
+        cache_key = f"leagues_coverage:{season}"
+
+        # Cache HIT
+        cached = self.cache.get(cache_key)
+        if cached:
+            logger.debug(f"✅ Cache HIT: {cache_key} ({len(cached)} ligas)")
+            return cached
+
+        # Cache MISS
+        logger.info(f"🌐 Buscando coverage de ligas (season={season})...")
+
+        api_response = await self.client.get("/leagues", {
+            "season": season
+        })
+
+        leagues_data = api_response.get("response", [])
+        coverage_map: Dict[str, Dict[str, Any]] = {}
+
+        for item in leagues_data:
+            league = item.get("league", {})
+            league_id = str(league.get("id", ""))
+            seasons = item.get("seasons", [])
+
+            # Encontra a season solicitada
+            for s in seasons:
+                if s.get("year") == season:
+                    fixtures_coverage = s.get("coverage", {}).get("fixtures", {})
+                    coverage_map[league_id] = {
+                        "statistics_fixtures": fixtures_coverage.get("statistics_fixtures", False),
+                        "statistics_players": fixtures_coverage.get("statistics_players", False),
+                        "events": fixtures_coverage.get("events", False),
+                        "lineups": fixtures_coverage.get("lineups", False),
+                        "type": league.get("type", "league"),
+                    }
+                    break
+
+        # Cache 7 dias
+        if coverage_map:
+            self.cache.set(cache_key, coverage_map, ttl_seconds=604800)
+
+        logger.info(f"📊 Coverage obtido: {len(coverage_map)} ligas (season={season})")
+        return coverage_map
+
+    # ========================================
     # Live fixtures (polling)
     # ========================================
 
